@@ -3,7 +3,7 @@ package model;
 import model.Recurso;
 
 abstract class Coletavel {
-	Recurso r ; 
+	protected Recurso r ; 
 	
 	public Coletavel () {
 		this.r = new Recurso ();

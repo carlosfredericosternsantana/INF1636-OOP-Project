@@ -1,7 +1,7 @@
 package model;
 
 import java.util.Map;
-
+import model.Recurso;
 
 class Cidade extends Coletavel {
 	

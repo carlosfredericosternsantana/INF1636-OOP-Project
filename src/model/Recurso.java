@@ -1,6 +1,6 @@
 package model;
 
-public class Recurso {
+final public class Recurso {
 	
 //	int voto ;
 //	int espada;
@@ -14,7 +14,7 @@ public class Recurso {
 //	int ferro ;
 //	int pele;
 //	int vaca;
-	int[] v = new int [12];
+	private int[] v = new int [12];
 	
 	public Recurso () {
 		for (int i = 0 ; i < 12 ; i++) 
