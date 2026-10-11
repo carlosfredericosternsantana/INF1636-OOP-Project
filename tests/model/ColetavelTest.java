@@ -2,29 +2,38 @@ package model;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 
 import java.util.Map;
+import java.util.Set;
 
 import org.junit.Test;
 
-import model.Coletavel.Tipo;
 import model.Coletavel.TipoPeca;
+import model.Conselheiro.PecaBonus;
 
-/** Casos de teste dos elementos coletáveis do mapa. */
+/** Casos de teste dos elementos coletáveis do mapa: cidade, província e conselheiro. */
 public class ColetavelTest {
 
-	private static Coletavel cidadeComDoisTesouros() {
-		Coletavel cidade = new Coletavel("Samarcanda", Tipo.CIDADE);
+	private static Cidade cidadeComDoisTesouros() {
+		Cidade cidade = new Cidade("Samarcanda");
 		cidade.adicionar(TipoPeca.TESOURO_A, 1);
 		cidade.adicionar(TipoPeca.TESOURO_B, 1);
 		return cidade;
 	}
 
+	private static Conselheiro conselheiroDePeles() {
+		return Conselheiro.deParDeTesouros("Conselheiro do norte", TipoPeca.TESOURO_A, PecaBonus.DUAS_MOEDAS);
+	}
+
+	// ---------------------------------------------------------------- Cidade
+
 	/** O 1º tesouro da cidade custa 1 espada e o seguinte, no mesmo turno, custa 2. */
 	@Test
 	public void segundoTesouroDaMesmaCidadeCustaODobro() {
-		Coletavel cidade = cidadeComDoisTesouros();
+		Cidade cidade = cidadeComDoisTesouros();
 		Jogador jogador = new Jogador();
 		jogador.receber(TipoPeca.ESPADA, 3);
 
@@ -38,7 +47,7 @@ public class ColetavelTest {
 	/** Passado o turno, o ataque recomeça custando 1 espada. */
 	@Test
 	public void novoTurnoZeraOEscalonamento() {
-		Coletavel cidade = cidadeComDoisTesouros();
+		Cidade cidade = cidadeComDoisTesouros();
 		Jogador jogador = new Jogador();
 		jogador.receber(TipoPeca.ESPADA, 2);
 
@@ -52,7 +61,7 @@ public class ColetavelTest {
 	/** Sem espada não se toma tesouro, e nada é cobrado nem retirado. */
 	@Test
 	public void semEspadaNaoSaqueiaENaoCobra() {
-		Coletavel cidade = cidadeComDoisTesouros();
+		Cidade cidade = cidadeComDoisTesouros();
 		Jogador semEspadas = new Jogador();
 
 		assertFalse(cidade.coletar(semEspadas, TipoPeca.TESOURO_A));
@@ -60,54 +69,91 @@ public class ColetavelTest {
 		assertEquals(2, cidade.total());
 	}
 
+	/** Pedir um tesouro que a cidade não tem não cobra espada nem conta para o escalonamento. */
+	@Test
+	public void tesouroAusenteNaoCobra() {
+		Cidade cidade = cidadeComDoisTesouros();
+		Jogador jogador = new Jogador();
+		jogador.receber(TipoPeca.ESPADA, 1);
+
+		assertFalse(cidade.coletar(jogador, TipoPeca.TESOURO_E));
+		assertEquals(1, jogador.getEspadas());
+		assertEquals(Map.of(TipoPeca.ESPADA, 1), cidade.getCusto());
+	}
+
 	/** Tomar o último tesouro conquista a cidade e credita isso ao jogador. */
 	@Test
 	public void ultimoTesouroConquistaACidade() {
-		Coletavel cidade = cidadeComDoisTesouros();
+		Cidade cidade = cidadeComDoisTesouros();
 		Jogador jogador = new Jogador();
 		jogador.receber(TipoPeca.ESPADA, 3);
 
 		cidade.coletar(jogador, TipoPeca.TESOURO_A);
+		assertFalse(cidade.foiConquistada());
 		assertEquals(0, jogador.getCidadesConquistadas());
 
 		cidade.coletar(jogador, TipoPeca.TESOURO_B);
 		assertTrue(cidade.estaVazio());
+		assertSame(jogador, cidade.getConquistador());
 		assertEquals(1, jogador.getCidadesConquistadas());
 	}
 
-	/** A província cobra 1 punho, que é ação da coluna ativada, e entrega o tributo. */
+	/** Cidade guarda tesouros, não tributos. */
+	@Test(expected = IllegalArgumentException.class)
+	public void cidadeSoAceitaTesouro() {
+		new Cidade("Bagdá").adicionar(TipoPeca.MOEDA, 1);
+	}
+
+	// ---------------------------------------------------------------- Província
+
+	/** A província cobra 1 punho, que é ação da coluna ativada, e entrega o tributo dela. */
 	@Test
 	public void provinciaCobraPunho() {
-		Coletavel provincia = new Coletavel("Kiev", Tipo.PROVINCIA);
-		provincia.adicionar(TipoPeca.MOEDA, 2);
+		Provincia provincia = new Provincia("Kiev", TipoPeca.MOEDA);
+		provincia.receberTributo();
+		provincia.receberTributo();
 		Jogador jogador = new Jogador();
 		jogador.receber(TipoPeca.PUNHO, 1);
 
-		assertTrue(provincia.coletar(jogador, TipoPeca.MOEDA));
+		assertTrue(provincia.coletar(jogador));
 		assertEquals(1, jogador.getQuantidade(TipoPeca.MOEDA));
 		assertEquals(0, jogador.getQuantidade(TipoPeca.PUNHO));
-		assertFalse(provincia.coletar(jogador, TipoPeca.MOEDA)); // acabaram os punhos
+		assertFalse(provincia.coletar(jogador)); // acabaram os punhos
 		assertEquals(1, provincia.total());
 	}
 
-	/** Uma província comporta no máximo 3 peças de tributo. */
-	@Test(expected = IllegalStateException.class)
+	/** O Khan não passa do limite de 3 peças: na província cheia, nada é acrescentado. */
+	@Test
 	public void provinciaNaoPassaDeTresTributos() {
-		Coletavel provincia = new Coletavel("Kiev", Tipo.PROVINCIA);
-		provincia.adicionar(TipoPeca.YURT, 3);
-		provincia.adicionar(TipoPeca.YURT, 1);
+		Provincia provincia = new Provincia("Kiev", TipoPeca.YURT, true);
+		assertTrue(provincia.receberTributo());
+		assertTrue(provincia.receberTributo());
+		assertTrue(provincia.receberTributo());
+
+		assertFalse(provincia.receberTributo());
+		assertEquals(Provincia.MAX_TRIBUTOS, provincia.total());
+		assertTrue(provincia.ehDoKhan());
 	}
+
+	/** Província rende espada, yurt ou moeda; tesouro só vem de cidade. */
+	@Test(expected = IllegalArgumentException.class)
+	public void provinciaNaoRendeTesouro() {
+		new Provincia("Moscou", TipoPeca.TESOURO_C);
+	}
+
+	// ---------------------------------------------------------------- Conselheiro
 
 	/** Entrega certa rende votos; o bônus sai só na primeira, e a demanda não se esgota. */
 	@Test
 	public void entregaRendeVotosEOBonusSaiUmaVezSo() {
-		Coletavel conselheiro = new Coletavel("Conselheiro do norte", 1, Map.of(TipoPeca.TESOURO_A, 2), 0);
+		Conselheiro conselheiro = conselheiroDePeles();
 		Jogador jogador = new Jogador();
 		jogador.receber(TipoPeca.TESOURO_A, 4);
 
 		assertEquals(1, conselheiro.entregar(jogador, Map.of(TipoPeca.TESOURO_A, 2)));
 		assertEquals(1, jogador.getVotos());
 		assertEquals(1, jogador.getPecasDeBonus());
+		assertNull(conselheiro.getBonus());
 
 		assertEquals(1, conselheiro.entregar(jogador, Map.of(TipoPeca.TESOURO_A, 2)));
 		assertEquals(2, jogador.getVotos());
@@ -119,7 +165,7 @@ public class ColetavelTest {
 	/** Pagamento que não atende à demanda não é cobrado e não dá voto. */
 	@Test
 	public void entregaInsuficienteNaoCobra() {
-		Coletavel conselheiro = new Coletavel("Conselheiro do norte", 1, Map.of(TipoPeca.TESOURO_A, 2), 0);
+		Conselheiro conselheiro = conselheiroDePeles();
 		Jogador jogador = new Jogador();
 		jogador.receber(TipoPeca.TESOURO_A, 1);
 
@@ -129,10 +175,22 @@ public class ColetavelTest {
 		assertTrue(conselheiro.temBonus());
 	}
 
-	/** A parada que pede "3 tesouros de qualquer tipo" aceita tipos misturados. */
+	/** Mandar tesouros a mais não é aceito: o conselheiro nunca cobra além da demanda. */
+	@Test
+	public void entregaAcimaDaDemandaEhRecusada() {
+		Conselheiro conselheiro = conselheiroDePeles();
+		Jogador jogador = new Jogador();
+		jogador.receber(TipoPeca.TESOURO_A, 3);
+
+		assertEquals(0, conselheiro.entregar(jogador, Map.of(TipoPeca.TESOURO_A, 3)));
+		assertEquals(3, jogador.getTesouros());
+		assertEquals(0, jogador.getVotos());
+	}
+
+	/** A parada que pede "3 tesouros de qualquer tipo" aceita tipos misturados, e só 3. */
 	@Test
 	public void conselheiroDeTipoLivreAceitaTesourosMisturados() {
-		Coletavel conselheiro = new Coletavel("Qualquer tipo", 1, Map.of(), 3);
+		Conselheiro conselheiro = Conselheiro.deTesourosQuaisquer("Qualquer tipo", PecaBonus.VOTO);
 		Jogador jogador = new Jogador();
 		jogador.receber(TipoPeca.TESOURO_A, 1);
 		jogador.receber(TipoPeca.TESOURO_B, 1);
@@ -144,16 +202,23 @@ public class ColetavelTest {
 		assertEquals(0, jogador.getTesouros());
 	}
 
-	/** Conselheiro recebe entrega, não é saqueado. */
-	@Test(expected = IllegalStateException.class)
-	public void naoSeColetaDeUmConselheiro() {
-		new Coletavel("Karakorum", 2, Map.of(TipoPeca.TESOURO_C, 1), 0)
-				.coletar(new Jogador(), TipoPeca.TESOURO_C);
-	}
+	/** Karakorum pede os 3 tipos sorteados na preparação e dá 2 votos por entrega. */
+	@Test
+	public void karakorumDaDoisVotos() {
+		Conselheiro karakorum = Conselheiro.karakorum(
+				Set.of(TipoPeca.TESOURO_A, TipoPeca.TESOURO_C, TipoPeca.TESOURO_E), PecaBonus.DUAS_ESPADAS);
+		Jogador jogador = new Jogador();
+		jogador.receber(TipoPeca.TESOURO_A, 1);
+		jogador.receber(TipoPeca.TESOURO_C, 1);
+		jogador.receber(TipoPeca.TESOURO_E, 1);
+		jogador.receber(TipoPeca.TESOURO_B, 1);
 
-	/** Cidade é saqueada, não recebe entrega. */
-	@Test(expected = IllegalStateException.class)
-	public void naoSeEntregaAUmaCidade() {
-		cidadeComDoisTesouros().entregar(new Jogador(), Map.of(TipoPeca.TESOURO_A, 1));
+		// um dos tipos errado: recusado
+		assertEquals(0, karakorum.entregar(jogador,
+				Map.of(TipoPeca.TESOURO_A, 1, TipoPeca.TESOURO_B, 1, TipoPeca.TESOURO_E, 1)));
+		assertEquals(2, karakorum.entregar(jogador,
+				Map.of(TipoPeca.TESOURO_A, 1, TipoPeca.TESOURO_C, 1, TipoPeca.TESOURO_E, 1)));
+		assertEquals(2, jogador.getVotos());
+		assertEquals(1, jogador.getTesouros()); // sobrou o TESOURO_B
 	}
 }
