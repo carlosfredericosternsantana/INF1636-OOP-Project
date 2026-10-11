@@ -9,7 +9,9 @@ public class Jogador {
 	int yurtsNoMapa;                      // construir yurt, inclusive o posto no centro da cidade conquistada
 	int tesouros;                         // saquear cidade e entregar tesouro a conselheiro
 	int tiposDeTesouroDiferentes;         // idem: quantos dos 5 tipos ele tem na mão
-	int menorNumeroDeYurtsPorRegiao;      // construir yurt: menor contagem entre China, Rússia e Pérsia
+	int yurtsNaChina;                     // construir yurt: contagem por região,
+	int yurtsNaRussia;                    // usada pelas duas cartas que pedem
+	int yurtsNaPersia;                    // yurts em CADA uma das 3 regiões
 	int pecasDeBonus;                     // primeira entrega a cada conselheiro
 	int cidadesConquistadas;              // tomar o último tesouro de uma cidade
 	int linhasDeMelhoriaCompletas;        // comprar/ganhar melhoria
@@ -24,8 +26,11 @@ public class Jogador {
 
 	int getTiposDeTesouroDiferentes() { return tiposDeTesouroDiferentes; }
 
-	/** "1 yurt em cada região" é o mesmo que "a região com menos yurts já tem 1". */
-	int getMenorNumeroDeYurtsPorRegiao() { return menorNumeroDeYurtsPorRegiao; }
+	int getYurtsNaChina() { return yurtsNaChina; }
+
+	int getYurtsNaRussia() { return yurtsNaRussia; }
+
+	int getYurtsNaPersia() { return yurtsNaPersia; }
 
 	int getPecasDeBonus() { return pecasDeBonus; }
 
