@@ -109,7 +109,7 @@ public class ColetavelTest {
 	/** A província cobra 1 punho, que é ação da coluna ativada, e entrega o tributo dela. */
 	@Test
 	public void provinciaCobraPunho() {
-		Provincia provincia = new Provincia("Kiev", TipoPeca.MOEDA);
+		PoteDeRecursos provincia = new PoteDeRecursos("Kiev", TipoPeca.MOEDA);
 		provincia.receberTributo();
 		provincia.receberTributo();
 		Jogador jogador = new Jogador();
@@ -125,20 +125,20 @@ public class ColetavelTest {
 	/** O Khan não passa do limite de 3 peças: na província cheia, nada é acrescentado. */
 	@Test
 	public void provinciaNaoPassaDeTresTributos() {
-		Provincia provincia = new Provincia("Kiev", TipoPeca.YURT, true);
+		PoteDeRecursos provincia = new PoteDeRecursos("Kiev", TipoPeca.YURT, true);
 		assertTrue(provincia.receberTributo());
 		assertTrue(provincia.receberTributo());
 		assertTrue(provincia.receberTributo());
 
 		assertFalse(provincia.receberTributo());
-		assertEquals(Provincia.MAX_TRIBUTOS, provincia.total());
+		assertEquals(PoteDeRecursos.MAX_TRIBUTOS, provincia.total());
 		assertTrue(provincia.ehDoKhan());
 	}
 
 	/** Província rende espada, yurt ou moeda; tesouro só vem de cidade. */
 	@Test(expected = IllegalArgumentException.class)
 	public void provinciaNaoRendeTesouro() {
-		new Provincia("Moscou", TipoPeca.TESOURO_C);
+		new PoteDeRecursos("Moscou", TipoPeca.TESOURO_C);
 	}
 
 	// ---------------------------------------------------------------- Conselheiro
