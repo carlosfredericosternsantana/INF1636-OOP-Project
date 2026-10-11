@@ -16,7 +16,7 @@ import java.util.Objects;
  */
 class Quest {
 
-	/** O que cada carta mede. Cada valor tem um getter correspondente no Jogador. */
+	/** O que cada carta mede, lido do Recurso e dos contadores do Jogador. */
 	enum TipoCondicao {
 		ESPADAS,                     // primeiro a ter 4 espadas
 		YURTS_NO_MAPA,               // 6 yurts no mapa; 10 yurts no mapa
@@ -70,24 +70,41 @@ class Quest {
 	}
 
 	/**
-	 * O jogador mantém esses contadores em dia conforme joga,
-	 * de modo que checar uma carta é só uma comparação  nada é recalculado aqui
+	 * Lê o progresso no Recurso e nos contadores do Jogador; nada é recalculado a partir
+	 * do mapa. Os índices de yurtsPorRegiao seguem a ordem de {@link Mapa.Regiao}.
 	 */
 	private int progressoDe(Jogador jogador, TipoCondicao condicao) {
+		Recurso mao = jogador.getRecurso();
 		return switch (condicao) {
-			case ESPADAS                    -> jogador.getEspadas();
-			case YURTS_NO_MAPA              -> jogador.getYurtsNoMapa();
-			case TESOUROS                   -> jogador.getTesouros();
-			case TESOUROS_DIFERENTES        -> jogador.getTiposDeTesouroDiferentes();
-			case YURTS_NA_CHINA             -> jogador.getYurtsNaChina();
-			case YURTS_NA_RUSSIA            -> jogador.getYurtsNaRussia();
-			case YURTS_NA_PERSIA            -> jogador.getYurtsNaPersia();
+			case ESPADAS                    -> Mapa.Peca.ESPADA.em(mao);
+			case YURTS_NO_MAPA              -> yurtsNoMapa(jogador);
+			case TESOUROS                   -> Mapa.Peca.tesouros(mao);
+			case TESOUROS_DIFERENTES        -> tiposDeTesouro(mao);
+			case YURTS_NA_CHINA             -> jogador.getYurtsPorRegiao(Mapa.Regiao.CHINA.ordinal());
+			case YURTS_NA_RUSSIA            -> jogador.getYurtsPorRegiao(Mapa.Regiao.RUSSIA.ordinal());
+			case YURTS_NA_PERSIA            -> jogador.getYurtsPorRegiao(Mapa.Regiao.PERSIA.ordinal());
 			case PECAS_DE_BONUS             -> jogador.getPecasDeBonus();
 			case CIDADES_CONQUISTADAS       -> jogador.getCidadesConquistadas();
-			case LINHAS_DE_MELHORIA         -> jogador.getLinhasDeMelhoriaCompletas();
-			case COLUNAS_COM_DUAS_MELHORIAS -> jogador.getColunasComDuasMelhorias();
-			case MELHORIAS_NA_MESMA_COLUNA  -> jogador.getMaiorNumeroDeMelhoriasNumaColuna();
+			// TODO: os contadores de melhoria estão comentados no Jogador até a classe Melhoria
+			// existir; enquanto isso, estas três cartas não podem ser cumpridas.
+			case LINHAS_DE_MELHORIA,
+			     COLUNAS_COM_DUAS_MELHORIAS,
+			     MELHORIAS_NA_MESMA_COLUNA  -> 0;
 		};
+	}
+
+	/** Yurts no mapa = soma das 3 regiões (o yurt no centro de cidade conquistada já entra na região). */
+	private static int yurtsNoMapa(Jogador jogador) {
+		int total = 0;
+		for (int regiao = 0; regiao < 3; regiao++) total += jogador.getYurtsPorRegiao(regiao);
+		return total;
+	}
+
+	private static int tiposDeTesouro(Recurso mao) {
+		int tipos = 0;
+		for (Mapa.Peca peca : Mapa.Peca.values())
+			if (peca.ehTesouro() && peca.em(mao) > 0) tipos++;
+		return tipos;
 	}
 
 	boolean foiCumprida() { return cumpridaPor != null; }

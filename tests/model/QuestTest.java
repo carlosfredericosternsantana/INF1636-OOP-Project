@@ -10,19 +10,24 @@ import java.util.Map;
 
 import org.junit.Test;
 
-import model.Coletavel.TipoPeca;
-
 import model.Quest.TipoCondicao;
 
 /** Casos de teste da carta de conselheiro aberto. */
 public class QuestTest {
+
+	/** No padrão do Recurso: pega a cópia, altera e devolve ao jogador. */
+	private static void darEspadas(Jogador jogador, int quantidade) {
+		Recurso mao = jogador.getRecurso();
+		mao.setEspada(mao.getEspada() + quantidade);
+		jogador.setRecurso(mao);
+	}
 
 	/** Quem ainda não atingiu a demanda não cumpre a carta, e ela continua em jogo. */
 	@Test
 	public void naoCumpreAbaixoDaDemanda() {
 		Quest quatroEspadas = new Quest(TipoCondicao.ESPADAS, 4);
 		Jogador jogador = new Jogador();
-		jogador.receber(TipoPeca.ESPADA, 3);
+		darEspadas(jogador, 3);
 
 		assertFalse(quatroEspadas.checarQuests(jogador));
 		assertFalse(quatroEspadas.foiCumprida());
@@ -34,7 +39,7 @@ public class QuestTest {
 	public void cumpreAoAtingirADemanda() {
 		Quest quatroEspadas = new Quest(TipoCondicao.ESPADAS, 4);
 		Jogador jogador = new Jogador();
-		jogador.receber(TipoPeca.ESPADA, 4);
+		darEspadas(jogador, 4);
 
 		assertTrue(quatroEspadas.checarQuests(jogador));
 		assertTrue(quatroEspadas.foiCumprida());
@@ -48,9 +53,9 @@ public class QuestTest {
 	public void segundoJogadorNaoLevaCartaJaCumprida() {
 		Quest quatroEspadas = new Quest(TipoCondicao.ESPADAS, 4);
 		Jogador primeiro = new Jogador();
-		primeiro.receber(TipoPeca.ESPADA, 4);
+		darEspadas(primeiro, 4);
 		Jogador segundo = new Jogador();
-		segundo.receber(TipoPeca.ESPADA, 10);
+		darEspadas(segundo, 10);
 
 		assertTrue(quatroEspadas.checarQuests(primeiro));
 		assertFalse(quatroEspadas.checarQuests(segundo));
@@ -87,13 +92,13 @@ public class QuestTest {
 				TipoCondicao.YURTS_NA_RUSSIA, 1,
 				TipoCondicao.YURTS_NA_PERSIA, 1));
 		Jogador jogador = new Jogador();
-		jogador.yurtsNaChina = 5;
-		jogador.yurtsNaRussia = 5;
+		jogador.yurtsPorRegiao[Mapa.Regiao.CHINA.ordinal()] = 5;
+		jogador.yurtsPorRegiao[Mapa.Regiao.RUSSIA.ordinal()] = 5;
 
 		assertFalse(umYurtEmCadaRegiao.checarQuests(jogador)); // falta a Pérsia
 		assertEquals(1, umYurtEmCadaRegiao.getQuantidadeExigida(TipoCondicao.YURTS_NA_PERSIA));
 
-		jogador.yurtsNaPersia = 1;
+		jogador.yurtsPorRegiao[Mapa.Regiao.PERSIA.ordinal()] = 1;
 		assertTrue(umYurtEmCadaRegiao.checarQuests(jogador));
 	}
 
@@ -109,4 +114,19 @@ public class QuestTest {
 		new Quest(TipoCondicao.ESPADAS, 0);
 	}
 
+	/** "Yurts no mapa" soma as 3 regiões, e "tesouros diferentes" conta os tipos na mão. */
+	@Test
+	public void contadoresDerivadosDoRecursoEDasRegioes() {
+		Jogador jogador = new Jogador();
+		jogador.yurtsPorRegiao[Mapa.Regiao.CHINA.ordinal()] = 3;
+		jogador.yurtsPorRegiao[Mapa.Regiao.PERSIA.ordinal()] = 3;
+		Recurso mao = jogador.getRecurso();
+		mao.setGraos(2);
+		mao.setFerro(1);
+		jogador.setRecurso(mao);
+
+		assertTrue(new Quest(TipoCondicao.YURTS_NO_MAPA, 6).checarQuests(jogador));
+		assertFalse(new Quest(TipoCondicao.TESOUROS_DIFERENTES, 5).checarQuests(jogador));
+		assertTrue(new Quest(TipoCondicao.TESOUROS, 3).checarQuests(jogador));
+	}
 }
