@@ -5,24 +5,14 @@ import java.util.Map;
 import java.util.Objects;
 
 /**
- * Carta de conselheiro aberto (manual, p. 18).
+ * Carta de conselheiro aberto (manual, pagina 18).
  *
  * São 14 cartas, das quais 4 entram em jogo. Cada uma dá 1 voto no Kurultai ao
  * PRIMEIRO jogador que cumprir a sua demanda; feito isso a carta sai de jogo e não é
- * reposta. As cartas de conselheiro SECRETO não estão aqui: elas pertencem a um
+ * reposta. As cartas de conselheiro SECRETO não estão aqui. elas pertencem a um
  * jogador só e são contadas no fim da partida, então ficam no Jogador.
  *
- * A demanda de uma carta é um mapa "o que medir -> quanto é preciso ter", e a carta
- * só é cumprida quando TODAS as exigências do mapa são atingidas ao mesmo tempo.
- * A maioria das cartas tem uma exigência só ("4 espadas"), mas as duas cartas de
- * região exigem três de uma vez ("1 yurt na China E 1 na Rússia E 1 na Pérsia").
- *
- * O mapa é por carta, e não um mapa global por condição, porque a mesma condição
- * aparece em cartas diferentes com números diferentes: 6 e 10 yurts no mapa, 2 e 3
- * peças de bônus, 2 e 3 cidades, 1 e 2 yurts por região.
- *
- * Carta nova = valor novo em {@link TipoCondicao} e um caso no switch, sem mexer em
- * mais nada (princípio aberto/fechado).
+
  */
 class Quest {
 
@@ -80,9 +70,8 @@ class Quest {
 	}
 
 	/**
-	 * Quem conta é o próprio Jogador: ele mantém esses contadores em dia conforme joga,
-	 * de modo que checar uma carta é só uma comparação - nada é recalculado aqui,
-	 * varrendo mapa e tabuleiro, a cada turno.
+	 * O jogador mantém esses contadores em dia conforme joga,
+	 * de modo que checar uma carta é só uma comparação  nada é recalculado aqui
 	 */
 	private int progressoDe(Jogador jogador, TipoCondicao condicao) {
 		return switch (condicao) {
@@ -103,7 +92,7 @@ class Quest {
 
 	boolean foiCumprida() { return cumpridaPor != null; }
 
-	/** Quem levou a carta, ou null se ela ainda está em jogo. */
+
 	Jogador getCumpridaPor() { return cumpridaPor; }
 
 	Map<TipoCondicao, Integer> getDemanda() { return Map.copyOf(demanda); }

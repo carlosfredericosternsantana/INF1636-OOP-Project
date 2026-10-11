@@ -2,88 +2,125 @@ package model;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Objects;
 
 /**
- * Elemento do mapa de onde o jogador tira peças, ou para onde ele as leva.
+ * CLASSE AINDA EM DESENVOLVIMENTO
+ * 
+ * 
+ * Elemento do mapa com que o jogador interage pagando um preço: o coletável diz quanto
+ * custa, confere se ele tem, debita e só então entrega a recompensa.
  *
- * Os três casos do diagrama (cidade, pote de recursos e conselheiro) são uma classe
- * só, diferenciados pelo campo {@link Tipo}:
- *
- * <ul>
- * <li>CIDADE: guarda as peças de tesouro que podem ser saqueadas com espadas. Quando
- *     a última sai, a cidade está conquistada ({@link #estaVazio()}) - manual, p. 10.</li>
- * <li>PROVINCIA: o "pote de recursos". Guarda as peças de tributo (espada, yurt ou
- *     moeda) que o jogador coleta das províncias adjacentes às paradas onde esteve.
- *     No máximo 3 peças por província - manual, p. 9.</li>
- * <li>CONSELHEIRO: aqui o mapa de peças é a DEMANDA, isto é, os tesouros que têm de
- *     ser entregues para render {@link #getVotos()} votos no Kurultai - manual, p. 13.</li>
- * </ul>
+ * Cidade custa espada e dá tesouro. o 1º tesouro do turno custa 1 espada e os seguintes,
+ * da mesma cidade, custam 2 (pagina 10). Província custa punho e dá tributo (pagina 8).
+ * Conselheiro custa tesouro e dá votos, mais a peça de bônus para o primeiro que entregar
+ * (paginas 12 e 17); a demanda dele não se esgota.
  */
 class Coletavel {
 
 	enum Tipo { CIDADE, PROVINCIA, CONSELHEIRO }
 
-	/** Peças que circulam pelo tabuleiro: as 3 de tributo e os 5 tipos de tesouro. */
-	enum TipoPeca { ESPADA, YURT, MOEDA, TESOURO_A, TESOURO_B, TESOURO_C, TESOURO_D, TESOURO_E }
+	enum TipoPeca {
+		ESPADA, YURT, MOEDA,
+		PUNHO, 
+		TESOURO_A, TESOURO_B, TESOURO_C, TESOURO_D, TESOURO_E;
+
+		boolean ehTesouro() { return name().startsWith("TESOURO"); }
+	}
 
 	private static final int MAX_TRIBUTOS_POR_PROVINCIA = 3;
 
 	private final String nome;
 	private final Tipo tipo;
-	private final Map<TipoPeca, Integer> pecas = new HashMap<>();
+	private final Map<TipoPeca, Integer> pecas = new HashMap<>();   // estoque da cidade ou da província
+	private final Map<TipoPeca, Integer> demanda = new HashMap<>(); // o que o conselheiro exige
 	private final int votos;
-	private final int tesourosQuaisquerExigidos;
+	private final int tesourosQuaisquer; // só a parada que pede "3 tesouros de qualquer tipo"
 	private boolean bonusDisponivel;
+	private int tesourosTomadosNesteTurno;
 
 	/** Cidade ou província. */
 	Coletavel(String nome, Tipo tipo) {
-		this(nome, tipo, 0, 0);
+		if (tipo == Tipo.CONSELHEIRO) throw new IllegalArgumentException("conselheiro precisa de votos e demanda");
+		this.nome = nome;
+		this.tipo = tipo;
+		this.votos = 0;
+		this.tesourosQuaisquer = 0;
+	}
+
+	/** Conselheiro. Das 7 paradas, 6 exigem tesouro por tipo e uma exige 3 de tipo livre. */
+	Coletavel(String nome, int votos, Map<TipoPeca, Integer> demanda, int tesourosQuaisquer) {
+		this.nome = nome;
+		this.tipo = Tipo.CONSELHEIRO;
+		this.votos = votos;
+		this.demanda.putAll(demanda);
+		this.tesourosQuaisquer = tesourosQuaisquer;
+		this.bonusDisponivel = true;
+	}
+
+	/** O que o jogador tem de pagar agora para tirar uma peça daqui. */
+	Map<TipoPeca, Integer> getCusto() {
+		return switch (tipo) {
+			case CIDADE -> Map.of(TipoPeca.ESPADA, tesourosTomadosNesteTurno == 0 ? 1 : 2);
+			case PROVINCIA -> Map.of(TipoPeca.PUNHO, 1);
+			case CONSELHEIRO -> Map.copyOf(demanda);
+		};
 	}
 
 	/**
-	 * Conselheiro: quantos votos cada entrega rende e quantos tesouros de tipo livre
-	 * ele exige. Só a parada que pede "3 tesouros de qualquer tipo" usa esse segundo
-	 * valor; nas outras a exigência é por tipo e entra por {@link #adicionar}.
+	 * O jogador paga o custo e leva a peça que escolheu, na cidade ou na província.
+	 * Devolve false, sem cobrar nada, se a peça não está aqui ou se ele não tem com que pagar.
 	 */
-	Coletavel(String nome, Tipo tipo, int votos, int tesourosQuaisquerExigidos) {
-		if (nome == null || nome.isBlank()) throw new IllegalArgumentException("coletável precisa de nome");
-		if (votos < 0 || tesourosQuaisquerExigidos < 0) throw new IllegalArgumentException("valor negativo");
-		this.nome = nome;
-		this.tipo = Objects.requireNonNull(tipo, "tipo obrigatório");
-		this.votos = votos;
-		this.tesourosQuaisquerExigidos = tesourosQuaisquerExigidos;
-		// Na preparação, uma peça de bônus é posta sobre cada um dos 7 conselheiros (p. 17).
-		this.bonusDisponivel = (tipo == Tipo.CONSELHEIRO);
+	boolean coletar(Jogador jogador, TipoPeca escolhida) {
+		if (tipo == Tipo.CONSELHEIRO) throw new IllegalStateException("conselheiro recebe entrega, não é coletado");
+		int disponivel = getQuantidade(escolhida);
+		if (disponivel == 0) return false;
+
+		Map<TipoPeca, Integer> custo = getCusto();
+		if (!jogador.tem(custo)) return false;
+		jogador.gastar(custo);
+
+		if (disponivel == 1) pecas.remove(escolhida);
+		else pecas.put(escolhida, disponivel - 1);
+		jogador.receber(escolhida, 1);
+
+		if (tipo == Tipo.CIDADE) {
+			tesourosTomadosNesteTurno++;
+			if (estaVazio()) jogador.conquistarCidade(); // o último tesouro conquista a cidade
+		}
+		return true;
 	}
 
-	/** Põe peças aqui: tesouros na cidade revelada, tributo trazido pelo Khan, ou a demanda do conselheiro. */
+	/**
+	 * Entrega de tesouros a um conselheiro: o pagamento tem de atender à demanda e estar
+	 * mesmo com o jogador. Devolve os votos creditados, ou 0 se a entrega não pôde ser feita.
+	 */
+	int entregar(Jogador jogador, Map<TipoPeca, Integer> pagamento) {
+		if (tipo != Tipo.CONSELHEIRO) throw new IllegalStateException("só se entrega a um conselheiro");
+		if (!atendeADemanda(pagamento) || !jogador.tem(pagamento)) return 0;
+
+		jogador.gastar(pagamento);
+		jogador.receberVotos(votos);
+		if (bonusDisponivel) {
+			bonusDisponivel = false;
+			jogador.receberBonus();
+		}
+		return votos;
+	}
+
+	/** Chamado ao fim da jogada: o próximo tesouro volta a custar 1 espada. */
+	void novoTurno() {
+		tesourosTomadosNesteTurno = 0;
+	}
+
+	/** Os tesouros da cidade revelada, o tributo trazido pelo Khan. */
 	void adicionar(TipoPeca peca, int quantidade) {
-		Objects.requireNonNull(peca, "peça obrigatória");
 		if (quantidade <= 0) throw new IllegalArgumentException("quantidade tem de ser positiva");
 		if (tipo == Tipo.PROVINCIA && total() + quantidade > MAX_TRIBUTOS_POR_PROVINCIA)
 			throw new IllegalStateException("província comporta no máximo " + MAX_TRIBUTOS_POR_PROVINCIA + " peças");
 		pecas.merge(peca, quantidade, Integer::sum);
 	}
 
-	/**
-	 * Tira peças daqui: saque de tesouro na cidade, coleta de tributo na província.
-	 *
-	 * @return quantas peças saíram de fato, que pode ser menos do que o pedido (ou 0).
-	 */
-	int coletar(TipoPeca peca, int quantidade) {
-		Objects.requireNonNull(peca, "peça obrigatória");
-		if (tipo == Tipo.CONSELHEIRO)
-			throw new IllegalStateException("não se coleta de um conselheiro: entrega-se a ele");
-		if (quantidade <= 0) throw new IllegalArgumentException("quantidade tem de ser positiva");
-		int disponivel = getQuantidade(peca);
-		int retirado = Math.min(quantidade, disponivel);
-		if (retirado == disponivel) pecas.remove(peca);
-		else pecas.put(peca, disponivel - retirado);
-		return retirado;
-	}
-
-	/** Cidade sem nenhum tesouro é cidade conquistada; província vazia não rende tributo. */
+	/** Cidade vazia é cidade conquistada; província vazia não rende tributo. */
 	boolean estaVazio() {
 		return pecas.isEmpty();
 	}
@@ -92,33 +129,26 @@ class Coletavel {
 		return pecas.getOrDefault(peca, 0);
 	}
 
-	/** Total de peças guardadas - ou exigidas, no caso do conselheiro. */
 	int total() {
 		int soma = 0;
 		for (int quantidade : pecas.values()) soma += quantidade;
 		return soma;
 	}
 
-	Map<TipoPeca, Integer> getPecas() {
-		return Map.copyOf(pecas);
-	}
+	boolean temBonus() { return bonusDisponivel; }
 
-	boolean temBonus() {
-		return bonusDisponivel;
-	}
-
-	/** Só o primeiro a entregar tesouros a este conselheiro leva a peça de bônus (p. 17). */
-	boolean pegarBonus() {
-		boolean tinha = bonusDisponivel;
-		bonusDisponivel = false;
-		return tinha;
-	}
-
-	String getNome() { return nome; }
 
 	Tipo getTipo() { return tipo; }
 
-	int getVotos() { return votos; }
-
-	int getTesourosQuaisquerExigidos() { return tesourosQuaisquerExigidos; }
+	private boolean atendeADemanda(Map<TipoPeca, Integer> pagamento) {
+		if (tesourosQuaisquer > 0) {
+			int tesouros = 0;
+			for (Map.Entry<TipoPeca, Integer> pago : pagamento.entrySet())
+				if (pago.getKey().ehTesouro()) tesouros += pago.getValue();
+			return tesouros >= tesourosQuaisquer;
+		}
+		for (Map.Entry<TipoPeca, Integer> exigido : demanda.entrySet())
+			if (pagamento.getOrDefault(exigido.getKey(), 0) < exigido.getValue()) return false;
+		return true;
+	}
 }
