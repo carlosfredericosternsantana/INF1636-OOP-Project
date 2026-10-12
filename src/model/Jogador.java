@@ -13,6 +13,7 @@ public class Jogador {
 	protected int cidadesConquistadas;    
 	protected Recurso r ; // inventario do player
 	protected Recurso [] colunas = new Recurso[4] ; // possiveis escolhas de acoes da tabela 
+	protected int [] melhoriasPorColuna = new int[4];
 	
 	Jogador () {
 		pos = new ArrayList<Integer>();
@@ -61,9 +62,15 @@ public class Jogador {
 	
 	public Recurso getColunas (int i) {
 		Recurso temp = new Recurso();
-		for (int j = 0 ;j < 12 ;i++)
+		for (int j = 0 ;j < 12 ;j++)
 			temp.setItem(j, this.colunas[i].getItem(j));
 		return temp;
+	}
+	
+	public int getMelhoriasNaColuna (int i) {
+		if (i>=0 && i<4)
+			return this.melhoriasPorColuna[i];
+		return -1;
 	}
 	
 }
