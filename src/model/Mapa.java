@@ -11,7 +11,7 @@ class Mapa {
     static final int TRILHA_DE_MELHORIAS = 1;
     static final int NUM_PARADAS = 34;
     static final int NUM_COL = 28;
-    static final int ESPADA = 1, YURT = 5, MOEDA = 6;
+    static final int VOTO = 0, ESPADA = 1, MAOZINHA = 2, YURT = 5, MOEDA = 6;
     static final int GRAOS = 7, TECIDO = 8, FERRO = 9, PELE = 10, VACA = 11;
     static final int CHINA = 0, RUSSIA = 1, PERSIA = 2;
     
@@ -92,7 +92,8 @@ class Mapa {
         paradas = new ArrayList<HashMap<String,Object>>();
         for (int i = 0; i < NUM_PARADAS; i++) {
             HashMap<String,Object> pa = new HashMap<String,Object>();
-            pa.put("yurt", -1);
+            pa.put("yurt", new ArrayList<Integer>());
+            pa.put("regiao", regiaoDe(i));
             pa.put("adj", new ArrayList<Integer>());
             pa.put("coletaveis", new ArrayList<Integer>());
             if (i<27) {pa.put("capacidade", 1);}
@@ -119,6 +120,27 @@ class Mapa {
             for (int pote : k) potes.add(pote);
             posicoesDoKhan.add(potes);
         }
+    }
+
+    static int regiaoDe(int parada) {
+        if (parada == KARAKORUM) return -1;
+        if (parada <= 8 || parada == 27 || parada == 28) return RUSSIA;
+        if (parada <= 17 || parada == 29 || parada == 30) return CHINA;
+        return PERSIA;
+    }
+
+    int getRegiao(int parada) {
+        return (Integer) paradas.get(parada).get("regiao");
+    }
+
+    @SuppressWarnings("unchecked")
+    ArrayList<Integer> yurtsEm(int parada) {
+        return (ArrayList<Integer>) paradas.get(parada).get("yurt");
+    }
+
+    int capacidadeDeYurts(int parada) {
+        if (parada == KARAKORUM) return 0;
+        return (Integer) paradas.get(parada).get("capacidade");
     }
 
     @SuppressWarnings("unchecked")

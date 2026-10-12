@@ -23,6 +23,12 @@ class PoteDeRecursos extends Coletavel {
 		return true;
 	}
 
+	boolean retirar() {
+		if (quantidade <= 0) return false;
+		quantidade--;
+		return true;
+	}
+
 	int esvaziar() {
 		int q = quantidade;
 		quantidade = 0;
