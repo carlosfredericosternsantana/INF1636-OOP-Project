@@ -16,7 +16,7 @@ class Mapa {
     static final int CHINA = 0, RUSSIA = 1, PERSIA = 2;
     
     protected ArrayList<Coletavel> coletaveis;   // lista global
-    protected ArrayList<int[]> posicoesDoKhan;
+    protected ArrayList<ArrayList<Integer>> posicoesDoKhan;
     protected int posKhan = FORA_DO_MAPA;
     private static final int[][] ROTAS = {
         //Kiev
@@ -111,10 +111,14 @@ class Mapa {
             for (int t = GRAOS; t <= VACA; t++) troca.setItem(t, c[2 + t - GRAOS]);
             adicionarColetavel(new Conselheiro(troca, c[7], c[1]), new int[] { c[0] }, 0);
         }
-        posicoesDoKhan = new ArrayList<int[]>();
-        posicoesDoKhan.add(new int[0]);   // 0 fora do mapa
-        posicoesDoKhan.add(new int[0]);   // 1 melhorias
-        for (int[] k : KHAN) posicoesDoKhan.add(k);
+        posicoesDoKhan = new ArrayList<ArrayList<Integer>>();
+        posicoesDoKhan.add(new ArrayList<Integer>());   // 0 fora do mapa
+        posicoesDoKhan.add(new ArrayList<Integer>());   // 1 melhorias
+        for (int[] k : KHAN) {
+            ArrayList<Integer> potes = new ArrayList<Integer>();
+            for (int pote : k) potes.add(pote);
+            posicoesDoKhan.add(potes);
+        }
     }
 
     @SuppressWarnings("unchecked")

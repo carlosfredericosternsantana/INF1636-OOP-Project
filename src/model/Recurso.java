@@ -1,6 +1,8 @@
 package model;
 
-final public class Recurso {
+import java.util.ArrayList;
+
+final class Recurso {
 	
 //	int voto ;
 //	int espada;
@@ -14,21 +16,21 @@ final public class Recurso {
 //	int ferro ;
 //	int pele;
 //	int vaca;
-	private int[] v = new int [12];
+	private ArrayList<Integer> v = new ArrayList<Integer>();
 	
 	public Recurso () {
 		for (int i = 0 ; i < 12 ; i++) 
-			v[i]=0;
+			v.add(0);
 		
 	}
 	int getItem (int i ) {
 		if (i>=0 && i< 12)
-			return this.v[i];
+			return this.v.get(i);
 		System.out.println("Não faz sentido esse numero ");
 		return -1;
 	}
 	void setItem (int i , int n) {
-		this.v[i]=n;
+		this.v.set(i, n);
 	}
 	
 	

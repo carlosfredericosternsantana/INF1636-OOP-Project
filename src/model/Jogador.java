@@ -5,30 +5,32 @@ import java.util.ArrayList;
 import java.util.Map;
 import java.util.Objects;
 
-public class Jogador {
+class Jogador {
 
 	protected ArrayList<Integer> pos ;
-	protected int [] yurtsPorRegiao = new int[3];                    
+	protected ArrayList<Integer> yurtsPorRegiao = new ArrayList<Integer>();                    
 	protected int pecasDeBonus;                     
 	protected int cidadesConquistadas;    
 	protected Recurso r ; // inventario do player
-	protected Recurso [] colunas = new Recurso[4] ; // possiveis escolhas de acoes da tabela 
-	protected int [] melhoriasPorColuna = new int[4];
+	protected ArrayList<Recurso> colunas = new ArrayList<Recurso>(); // possiveis escolhas de acoes da tabela 
+	protected ArrayList<Integer> melhoriasPorColuna = new ArrayList<Integer>();
 	
 	Jogador () {
 		pos = new ArrayList<Integer>();
 		for (int i  = 0 ; i < 3 ;i++)
-			this.yurtsPorRegiao[i]=0;
+			this.yurtsPorRegiao.add(0);
 		this.pecasDeBonus = 0 ;
 		this.cidadesConquistadas = 0;
 		this.r = new Recurso();
-		for (int i = 0 ; i < 4 ; i++)
-			colunas[i] = new Recurso();
+		for (int i = 0 ; i < 4 ; i++) {
+			colunas.add(new Recurso());
+			melhoriasPorColuna.add(0);
+		}
 	}
 	
 	public int getYurtsPorRegiao (int i) {
 		if  (i>=0 && i<=2) 
-			return this.yurtsPorRegiao[i];
+			return this.yurtsPorRegiao.get(i);
 		System.out.println("Número incompatível com as regiões");
 		return -1;
 	}
@@ -63,13 +65,13 @@ public class Jogador {
 	public Recurso getColunas (int i) {
 		Recurso temp = new Recurso();
 		for (int j = 0 ;j < 12 ;j++)
-			temp.setItem(j, this.colunas[i].getItem(j));
+			temp.setItem(j, this.colunas.get(i).getItem(j));
 		return temp;
 	}
 	
 	public int getMelhoriasNaColuna (int i) {
 		if (i>=0 && i<4)
-			return this.melhoriasPorColuna[i];
+			return this.melhoriasPorColuna.get(i);
 		return -1;
 	}
 	

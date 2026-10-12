@@ -12,6 +12,8 @@ import org.junit.Test;
 
 public class MapaTest {
 
+	private static final int TEMPO = 1000;
+
 	private Mapa mapa;
 
 	@Before
@@ -19,34 +21,39 @@ public class MapaTest {
 		mapa = new Mapa();
 	}
 
-	@Test
+	private int quantidadeNoPote(int pote) {
+		return ((PoteDeRecursos) mapa.coletaveis.get(pote)).getQuantidade();
+	}
+
+	@Test(timeout = TEMPO)
 	public void rotasSaoSimetricasEKarakorumTemQuatroVizinhos() {
 		for (int p = 0; p < Mapa.NUM_PARADAS; p++)
 			for (int v : mapa.adj(p))
-				assertTrue(mapa.adj(v).contains(p));
-		assertEquals(new HashSet<Integer>(Arrays.asList(6, 12, 25, 28)),
+				assertTrue("parada " + v + " deveria ter a parada " + p + " como vizinha", mapa.adj(v).contains(p));
+		assertEquals("vizinhos de Karakorum", new HashSet<Integer>(Arrays.asList(6, 12, 25, 28)),
 				new HashSet<Integer>(mapa.adj(Mapa.KARAKORUM)));
 	}
 
-	@Test
+	@Test(timeout = TEMPO)
 	public void coletaveisSoSaoAlcancadosDeParadasVizinhas() {
-		assertEquals(28, mapa.coletaveis.size());
-		assertTrue(mapa.alcanca(1, 0));
-		assertFalse(mapa.alcanca(0, 0));
-		assertTrue(mapa.alcanca(Mapa.KARAKORUM, 27));
+		assertEquals("total de coletaveis no mapa", 28, mapa.coletaveis.size());
+		assertTrue("pote 0 deveria ser alcancado pela parada 1", mapa.alcanca(1, 0));
+		assertFalse("pote 0 nao deveria ser alcancado pela parada 0", mapa.alcanca(0, 0));
+		assertTrue("conselheiro de Karakorum deveria ser alcancado pela parada 33", mapa.alcanca(Mapa.KARAKORUM, 27));
 		for (int p = 0; p < Mapa.KARAKORUM; p++)
-			assertFalse(mapa.alcanca(p, 27));
+			assertFalse("conselheiro de Karakorum nao deveria ser alcancado pela parada " + p, mapa.alcanca(p, 27));
 	}
 
-	@Test
+	@Test(timeout = TEMPO)
 	public void khanEncheOsTresPotesENaoRepetePosicao() {
-		assertTrue(mapa.moverKhan(2));
-		for (int pote = 0; pote <= 2; pote++)
-			assertEquals(1, ((PoteDeRecursos) mapa.coletaveis.get(pote)).getQuantidade());
-		assertEquals(0, ((PoteDeRecursos) mapa.coletaveis.get(3)).getQuantidade());
-		assertFalse(mapa.moverKhan(2));
-		assertTrue(mapa.moverKhan(Mapa.TRILHA_DE_MELHORIAS));
-		assertTrue(mapa.moverKhan(2));
-		assertEquals(2, ((PoteDeRecursos) mapa.coletaveis.get(0)).getQuantidade());
+		assertTrue("Khan deveria ir para a posicao 2", mapa.moverKhan(2));
+		assertEquals("pote 0 apos o Khan", 1, quantidadeNoPote(0));
+		assertEquals("pote 1 apos o Khan", 1, quantidadeNoPote(1));
+		assertEquals("pote 2 apos o Khan", 1, quantidadeNoPote(2));
+		assertEquals("pote 3 nao e apontado pela posicao 2", 0, quantidadeNoPote(3));
+		assertFalse("Khan nao pode ficar na mesma posicao", mapa.moverKhan(2));
+		assertTrue("Khan deveria ir para a trilha de melhorias", mapa.moverKhan(Mapa.TRILHA_DE_MELHORIAS));
+		assertTrue("Khan deveria voltar para a posicao 2", mapa.moverKhan(2));
+		assertEquals("pote 0 apos o Khan voltar", 2, quantidadeNoPote(0));
 	}
 }

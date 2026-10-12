@@ -43,10 +43,10 @@ class Melhorias {
 
 	boolean aplicar(Jogador jogador) {
 		if (jogador == null || !estaNaTrilha()) return false;
-		Recurso coluna = jogador.colunas[cor];
+		Recurso coluna = jogador.colunas.get(cor);
 		for (int i = 0; i < 12; i++)
 			coluna.setItem(i, coluna.getItem(i) + bonus.getItem(i));
-		jogador.melhoriasPorColuna[cor]++;
+		jogador.melhoriasPorColuna.set(cor, jogador.melhoriasPorColuna.get(cor) + 1);
 		posicao = COMPRADA;
 		return true;
 	}
