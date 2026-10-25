@@ -12,6 +12,7 @@ class Mapa {
     static final int NUM_PARADAS = 34;
     static final int NUM_COL = 28;
     static final int VOTO = 0, ESPADA = 1, MAOZINHA = 2, YURT = 5, MOEDA = 6;
+    static final int CAVALO = 3, CABECA_DO_KHAN = 4;
     static final int GRAOS = 7, TECIDO = 8, FERRO = 9, PELE = 10, VACA = 11;
     static final int CHINA = 0, RUSSIA = 1, PERSIA = 2;
     
@@ -140,6 +141,10 @@ class Mapa {
 
     int capacidadeDeYurts(int parada) {
         if (parada == KARAKORUM) return 0;
+        return (Integer) paradas.get(parada).get("capacidade");
+    }
+
+    int capacidadeDePioes(int parada) {
         return (Integer) paradas.get(parada).get("capacidade");
     }
 

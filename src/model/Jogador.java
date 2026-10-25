@@ -5,6 +5,18 @@ import java.util.ArrayList;
 
 class Jogador {
 
+	static final int VERMELHA = 0, VERDE = 1, AMARELA = 2, BRANCA = 3;
+	static final int SEM_HERDEIRO = -1;
+
+	static final String[] HERDEIROS = { "Altani", "Jochi", "Chagatai", "Tolui", "Ogedei" };
+
+	// acoes impressas na base de cada coluna da cartela, uma linha por herdeiro.
+	// a ordem das colunas e a do tabuleiro de jogador: vermelha, verde, amarela, branca.
+	private static final int[][] CAVALOS   = { {1,2,1,2}, {1,1,2,2}, {1,1,2,2}, {1,2,1,2}, {2,1,1,2} };
+	private static final int[][] MAOZINHAS = { {2,1,1,0}, {1,2,1,0}, {2,1,1,0}, {1,1,2,0}, {1,1,2,0} };
+	private static final int[][] KHANS     = { {1,0,0,1}, {0,1,0,1}, {1,0,0,1}, {0,0,1,1}, {0,0,1,1} };
+	private static final int[][] MOEDAS    = { {0,0,1,0}, {1,0,0,0}, {0,1,0,0}, {1,0,0,0}, {0,1,0,0} };
+
 	protected ArrayList<Integer> pos ;
 	protected ArrayList<Integer> yurtsPorRegiao = new ArrayList<Integer>();                    
 	protected int pecasDeBonus;                     
@@ -12,7 +24,9 @@ class Jogador {
 	protected Recurso r ; // inventario do player
 	protected ArrayList<Recurso> colunas = new ArrayList<Recurso>(); // possiveis escolhas de acoes da tabela 
 	protected ArrayList<Integer> melhoriasPorColuna = new ArrayList<Integer>();
+	protected ArrayList<Boolean> colunasUsadas = new ArrayList<Boolean>();
 	protected int indice;
+	protected int herdeiro;
 	protected int parada = Mapa.KARAKORUM;
 	
 	Jogador () {
@@ -20,7 +34,12 @@ class Jogador {
 	}
 	
 	Jogador (int indice) {
+		this(indice, SEM_HERDEIRO);
+	}
+	
+	Jogador (int indice, int herdeiro) {
 		this.indice = indice;
+		this.herdeiro = herdeiro;
 		pos = new ArrayList<Integer>();
 		for (int i  = 0 ; i < 3 ;i++)
 			this.yurtsPorRegiao.add(0);
@@ -30,7 +49,41 @@ class Jogador {
 		for (int i = 0 ; i < 4 ; i++) {
 			colunas.add(new Recurso());
 			melhoriasPorColuna.add(0);
+			colunasUsadas.add(false);
 		}
+		if (herdeiro >= 0 && herdeiro < HERDEIROS.length)
+			for (int i = 0 ; i < 4 ; i++) {
+				Recurso coluna = colunas.get(i);
+				coluna.setItem(Mapa.CAVALO, CAVALOS[herdeiro][i]);
+				coluna.setItem(Mapa.MAOZINHA, MAOZINHAS[herdeiro][i]);
+				coluna.setItem(Mapa.CABECA_DO_KHAN, KHANS[herdeiro][i]);
+				coluna.setItem(Mapa.MOEDA, MOEDAS[herdeiro][i]);
+			}
+	}
+	
+	String getHerdeiro () {
+		if (herdeiro < 0 || herdeiro >= HERDEIROS.length) return "Jogador " + (indice + 1);
+		return HERDEIROS[herdeiro];
+	}
+	
+	int getCavalosDaColuna (int coluna) {
+		if (coluna < 0 || coluna >= Melhorias.NUM_COLUNAS) return 0;
+		return colunas.get(coluna).getItem(Mapa.CAVALO);
+	}
+	
+	boolean colunaDisponivel (int coluna) {
+		if (coluna < 0 || coluna >= Melhorias.NUM_COLUNAS) return false;
+		return !colunasUsadas.get(coluna);
+	}
+	
+	// a peca de ativacao fica na coluna ate ser recuperada. a coluna branca
+	// devolve todas as pecas, inclusive a que acabou de ser usada.
+	boolean ativarColuna (int coluna) {
+		if (!colunaDisponivel(coluna)) return false;
+		colunasUsadas.set(coluna, true);
+		if (coluna == BRANCA)
+			for (int i = 0 ; i < Melhorias.NUM_COLUNAS ; i++) colunasUsadas.set(i, false);
+		return true;
 	}
 	
 	public int getYurtsPorRegiao (int i) {
