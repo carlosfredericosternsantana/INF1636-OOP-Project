@@ -14,54 +14,64 @@ import javax.swing.JButton;
 import javax.swing.JComboBox;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
+import javax.swing.JMenuItem;
 import javax.swing.JPanel;
+import javax.swing.JPopupMenu;
 import javax.swing.SwingConstants;
 
 import controller.Controlador;
 import model.Fachada;
+import model.ObservadoIF;
+import model.ObservadorIF;
 
-// Janela do tabuleiro. Os componentes Swing aqui so cuidam da ativacao das
-// colunas, do ajuste do testador e da troca de vez; o jogo em si e desenhado
-// pelo PainelTabuleiro com Java2D.
-public class JanelaTabuleiro extends JFrame {
+// Janela do tabuleiro. Os componentes Swing aqui so mostram texto e disparam
+// acoes; o jogo em si e desenhado pelo PainelTabuleiro com Java2D. A janela
+// observa o model e se atualiza a cada notificacao.
+public class JanelaTabuleiro extends JFrame implements ObservadorIF {
 
 	private static final long serialVersionUID = 1L;
 
-	private static final String[] NOMES_DAS_COLUNAS = { "Vermelha", "Verde", "Amarela", "Branca" };
+	private static final String[] NOMES = PainelTabuleiro.NOMES_DOS_RECURSOS;
 
 	private final Fachada fachada = Fachada.getInstancia();
 	private final PainelTabuleiro painelTabuleiro = new PainelTabuleiro();
-	private final JButton[] botoesDeColuna = new JButton[Fachada.NUM_COLUNAS];
+	private final JanelaCartela janelaCartela = new JanelaCartela();
+	private final JanelaCartas janelaCartas = new JanelaCartas();
 	private final JLabel rotuloDaVez = new JLabel("", SwingConstants.CENTER);
 	private final JLabel rotuloDeMovimentos = new JLabel("", SwingConstants.CENTER);
 	private final JPanel painelDaVez = new JPanel(new GridLayout(2, 1));
+	private final JLabel rotuloDoTurno = new JLabel();
+	private final JLabel rotuloDoJogador = new JLabel();
+	private final JLabel rotuloDoKurultai = new JLabel();
+	private final JButton botaoDeYurt = botao("Construir yurt aqui", Controlador.YURT);
+	private final JButton botaoDeEntrega = botao("Entregar ao conselheiro", Controlador.ENTREGAR);
+	private final JButton botaoDaCartela = botao("Cartela", Controlador.CARTELA);
+	private final JButton botaoDeCartas = botao("Cartas", Controlador.CARTAS);
 	private final JComboBox<Integer> seletorDeMovimentos = new JComboBox<Integer>();
-	private final JButton botaoDeDefinir = new JButton("Definir movimentos");
-	private final JButton botaoDePassar = new JButton("Passar a vez");
+	private final JButton botaoDeDefinir = botao("Definir movimentos", Controlador.DEFINIR);
+	private final JButton botaoDePassar = botao("Passar a vez", Controlador.PASSAR);
 
 	public JanelaTabuleiro () {
 		super("Herdeiros de Khan");
-		Controlador controlador = new Controlador(this);
-
-		painelTabuleiro.addMouseListener(controlador);
-		for (int coluna = 0; coluna < botoesDeColuna.length; coluna++) {
-			botoesDeColuna[coluna] = new JButton();
-			botoesDeColuna[coluna].setActionCommand(String.valueOf(coluna));
-			botoesDeColuna[coluna].addActionListener(controlador);
-		}
 		for (int valor = 1; valor <= 6; valor++) seletorDeMovimentos.addItem(Integer.valueOf(valor));
-		botaoDeDefinir.setActionCommand(Controlador.DEFINIR);
-		botaoDeDefinir.addActionListener(controlador);
-		botaoDePassar.setActionCommand(Controlador.PASSAR);
-		botaoDePassar.addActionListener(controlador);
-
 		setLayout(new BorderLayout());
 		add(painelTabuleiro, BorderLayout.CENTER);
 		add(montarPainelDeControle(), BorderLayout.EAST);
 		setDefaultCloseOperation(EXIT_ON_CLOSE);
+		atualizar();
 		pack();
 		setLocationRelativeTo(null);
-		atualizar();
+		Controlador.getInstancia().registra(this);
+		janelaCartela.setVisible(true);
+	}
+
+	private static JButton botao (String texto, String comando) {
+		JButton botao = new JButton(texto);
+		botao.setActionCommand(comando);
+		botao.addActionListener(Controlador.getInstancia());
+		botao.setAlignmentX(Component.CENTER_ALIGNMENT);
+		botao.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
+		return botao;
 	}
 
 	private JPanel montarPainelDeControle () {
@@ -72,67 +82,111 @@ public class JanelaTabuleiro extends JFrame {
 
 		rotuloDaVez.setFont(rotuloDaVez.getFont().deriveFont(Font.BOLD, 24f));
 		rotuloDeMovimentos.setFont(rotuloDeMovimentos.getFont().deriveFont(Font.BOLD, 20f));
+		rotuloDaVez.setForeground(Color.WHITE);
+		rotuloDeMovimentos.setForeground(Color.WHITE);
 		// A area da vez e pintada com a cor do jogador, como pede o enunciado.
 		painelDaVez.add(rotuloDaVez);
 		painelDaVez.add(rotuloDeMovimentos);
-		painelDaVez.setMaximumSize(new Dimension(Integer.MAX_VALUE, 110));
+		painelDaVez.setMaximumSize(new Dimension(Integer.MAX_VALUE, 100));
 		painelDaVez.setBorder(BorderFactory.createLineBorder(Color.DARK_GRAY, 2));
 		controle.add(painelDaVez);
-		controle.add(Box.createVerticalStrut(24));
 
-		controle.add(titulo("Ativar uma coluna da cartela"));
-		for (JButton botao : botoesDeColuna) {
-			botao.setAlignmentX(Component.CENTER_ALIGNMENT);
-			botao.setMaximumSize(new Dimension(Integer.MAX_VALUE, 46));
+		for (JLabel rotulo : new JLabel[] { rotuloDoTurno, rotuloDoJogador, rotuloDoKurultai }) {
+			controle.add(Box.createVerticalStrut(14));
+			rotulo.setAlignmentX(Component.CENTER_ALIGNMENT);
+			controle.add(rotulo);
+		}
+
+		controle.add(Box.createVerticalStrut(18));
+		for (JButton botao : new JButton[] { botaoDeYurt, botaoDeEntrega, botaoDaCartela, botaoDeCartas }) {
 			controle.add(botao);
 			controle.add(Box.createVerticalStrut(6));
 		}
 
-		controle.add(Box.createVerticalStrut(24));
-		controle.add(titulo("Testador"));
+		controle.add(Box.createVerticalStrut(18));
+		JLabel testador = new JLabel("Testador");
+		testador.setAlignmentX(Component.CENTER_ALIGNMENT);
+		testador.setFont(testador.getFont().deriveFont(Font.BOLD, 14f));
+		controle.add(testador);
 		seletorDeMovimentos.setMaximumSize(new Dimension(Integer.MAX_VALUE, 34));
 		seletorDeMovimentos.setAlignmentX(Component.CENTER_ALIGNMENT);
-		botaoDeDefinir.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
-		botaoDeDefinir.setAlignmentX(Component.CENTER_ALIGNMENT);
 		controle.add(seletorDeMovimentos);
 		controle.add(Box.createVerticalStrut(6));
 		controle.add(botaoDeDefinir);
 
 		controle.add(Box.createVerticalGlue());
 		botaoDePassar.setMaximumSize(new Dimension(Integer.MAX_VALUE, 52));
-		botaoDePassar.setAlignmentX(Component.CENTER_ALIGNMENT);
 		controle.add(botaoDePassar);
 		return controle;
 	}
-
-	private JLabel titulo (String texto) {
-		JLabel rotulo = new JLabel(texto);
-		rotulo.setAlignmentX(Component.CENTER_ALIGNMENT);
-		rotulo.setFont(rotulo.getFont().deriveFont(Font.BOLD, 14f));
-		return rotulo;
-	}
-
-	public PainelTabuleiro getPainelTabuleiro () { return painelTabuleiro; }
 
 	public int getMovimentosEscolhidos () {
 		return ((Integer) seletorDeMovimentos.getSelectedItem()).intValue();
 	}
 
-	public void atualizar () {
+	public void alternarCartela () { janelaCartela.setVisible(!janelaCartela.isVisible()); }
+
+	public void alternarCartas () { janelaCartas.setVisible(!janelaCartas.isVisible()); }
+
+	// Menu com os tesouros sacados pela peca de bonus; o jogador fica com um.
+	public void mostrarEscolhaDeTesouro () {
+		JPopupMenu menu = new JPopupMenu("Escolha um tesouro");
+		for (int tipo : fachada.getTesourosParaEscolher()) {
+			JMenuItem item = new JMenuItem("Ficar com " + NOMES[tipo]);
+			item.setActionCommand(Controlador.TESOURO + tipo);
+			item.addActionListener(Controlador.getInstancia());
+			menu.add(item);
+		}
+		menu.show(painelTabuleiro, painelTabuleiro.getWidth() / 2, painelTabuleiro.getHeight() / 2);
+	}
+
+	@Override
+	public void notify (ObservadoIF o) {
+		int evento = o.get(ObservadoIF.EVENTO);
+		atualizar();
+		if (evento == ObservadoIF.ESCOLHA) mostrarEscolhaDeTesouro();
+		else if (evento == ObservadoIF.FIM) new JanelaResultado().setVisible(true);
+	}
+
+	private void atualizar () {
 		int vez = fachada.getVez();
-		Color cor = PainelTabuleiro.CORES[vez % PainelTabuleiro.CORES.length];
-		painelDaVez.setBackground(cor);
-		rotuloDaVez.setForeground(Color.WHITE);
-		rotuloDeMovimentos.setForeground(Color.WHITE);
+		painelDaVez.setBackground(PainelTabuleiro.CORES[vez % PainelTabuleiro.CORES.length]);
 		rotuloDaVez.setText("Vez de " + fachada.getHerdeiro(vez));
 		rotuloDeMovimentos.setText(fachada.getMovimentos() + " movimento(s)");
 
-		for (int coluna = 0; coluna < botoesDeColuna.length; coluna++) {
-			botoesDeColuna[coluna].setText(NOMES_DAS_COLUNAS[coluna]
-					+ "  -  " + fachada.getCavalosDaColuna(coluna) + " cavalo(s)");
-			botoesDeColuna[coluna].setEnabled(fachada.getColunaAtivada() == Fachada.NENHUMA_COLUNA
-					&& fachada.colunaDisponivel(coluna));
+		String coluna = fachada.getColunaAtivada() == Fachada.NENHUMA_COLUNA ? "escolha uma coluna na cartela" : "coluna ativada";
+		rotuloDoTurno.setText("<html><b>Turno:</b> " + coluna
+				+ "<br>Punhos (tributos): " + fachada.getRecursoDoTurno(Fachada.MAOZINHA)
+				+ "<br>Khan: " + (fachada.isKhanPendente() ? "falta colocar" : "-")
+				+ (fachada.getMelhoriasGratis() > 0 ? "<br>Melhoria gratis: clique numa melhoria" : "")
+				+ "<br>Virtuais: " + listar(true, Fachada.ESPADA, Fachada.YURT, Fachada.MOEDA,
+						Fachada.GRAOS, Fachada.TECIDO, Fachada.FERRO, Fachada.PELE, Fachada.VACA) + "</html>");
+
+		rotuloDoJogador.setText("<html><b>Recursos:</b> " + listar(false, Fachada.ESPADA, Fachada.YURT, Fachada.MOEDA)
+				+ "<br><b>Tesouros:</b> " + listar(false, Fachada.GRAOS, Fachada.TECIDO, Fachada.FERRO, Fachada.PELE, Fachada.VACA)
+				+ "<br>Yurts no estoque: " + fachada.getYurtsRestantes(vez) + "</html>");
+
+		StringBuilder kurultai = new StringBuilder("<html><b>Kurultai</b> (" + fachada.getTotalDeVotos() + " votos)");
+		for (int j = 0; j < fachada.getQuantidadeDeJogadores(); j++)
+			kurultai.append("<br>").append(fachada.getHerdeiro(j)).append(": ").append(fachada.getVotos(j));
+		rotuloDoKurultai.setText(kurultai.append("</html>").toString());
+
+		boolean emJogo = !fachada.isTerminada();
+		botaoDeYurt.setEnabled(fachada.podeConstruirYurt());
+		botaoDeEntrega.setEnabled(fachada.podeEntregar());
+		botaoDeDefinir.setEnabled(emJogo);
+		botaoDePassar.setEnabled(fachada.podePassarVez());
+	}
+
+	// "Espada 2, Moeda 1" com os recursos que o jogador tem (do turno ou da mao).
+	private String listar (boolean doTurno, int... tipos) {
+		StringBuilder texto = new StringBuilder();
+		for (int tipo : tipos) {
+			int quantidade = doTurno ? fachada.getRecursoDoTurno(tipo) : fachada.getRecurso(fachada.getVez(), tipo);
+			if (quantidade == 0 && doTurno) continue;
+			if (texto.length() > 0) texto.append(", ");
+			texto.append(NOMES[tipo]).append(' ').append(quantidade);
 		}
-		painelTabuleiro.repaint();
+		return texto.length() == 0 ? "-" : texto.toString();
 	}
 }

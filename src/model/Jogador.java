@@ -7,6 +7,7 @@ class Jogador {
 
 	static final int VERMELHA = 0, VERDE = 1, AMARELA = 2, BRANCA = 3;
 	static final int SEM_HERDEIRO = -1;
+	static final int YURTS_POR_JOGADOR = 12;
 
 	static final String[] HERDEIROS = { "Altani", "Jochi", "Chagatai", "Tolui", "Ogedei" };
 
@@ -28,6 +29,11 @@ class Jogador {
 	protected int indice;
 	protected int herdeiro;
 	protected int parada = Mapa.KARAKORUM;
+	protected int yurtsRestantes = YURTS_POR_JOGADOR;
+	protected int melhoriasGratis = 0;      // ganhas ao completar linhas, vao para a coluna branca
+	protected int conselheiroSecreto = -1;
+	protected ArrayList<Integer> bonusRecebidos = new ArrayList<Integer>();
+	protected ArrayList<ArrayList<Melhorias>> melhoriasNaCartela = new ArrayList<ArrayList<Melhorias>>();
 	
 	Jogador () {
 		this(0);
@@ -50,6 +56,7 @@ class Jogador {
 			colunas.add(new Recurso());
 			melhoriasPorColuna.add(0);
 			colunasUsadas.add(false);
+			melhoriasNaCartela.add(new ArrayList<Melhorias>());
 		}
 		if (herdeiro >= 0 && herdeiro < HERDEIROS.length)
 			for (int i = 0 ; i < 4 ; i++) {
@@ -64,11 +71,6 @@ class Jogador {
 	String getHerdeiro () {
 		if (herdeiro < 0 || herdeiro >= HERDEIROS.length) return "Jogador " + (indice + 1);
 		return HERDEIROS[herdeiro];
-	}
-	
-	int getCavalosDaColuna (int coluna) {
-		if (coluna < 0 || coluna >= Melhorias.NUM_COLUNAS) return 0;
-		return colunas.get(coluna).getItem(Mapa.CAVALO);
 	}
 	
 	boolean colunaDisponivel (int coluna) {
@@ -145,61 +147,57 @@ class Jogador {
 		this.parada = parada;
 	}
 
-	protected boolean alcancaParaYurt (Mapa mapa, int destino) {
-		return destino == this.parada;
+	// Quantas linhas completas ha nas 3 colunas coloridas (a branca nao conta).
+	int linhasCompletas () {
+		int menor = Melhorias.LINHAS;
+		for (int c = VERMELHA ; c <= AMARELA ; c++)
+			menor = Math.min(menor, melhoriasPorColuna.get(c));
+		return menor;
 	}
 
-	boolean construirYurt (Mapa mapa) {
-		return construirYurt(mapa, this.parada);
+	boolean podeColocarYurt (Mapa mapa, int parada) {
+		if (yurtsRestantes < 1 || parada < 0 || parada >= Mapa.NUM_PARADAS) return false;
+		return mapa.yurtsEm(parada).size() < mapa.capacidadeDeYurts(parada);
 	}
 
-	boolean construirYurt (Mapa mapa, int destino) {
-		if (mapa == null || destino < 0 || destino >= Mapa.NUM_PARADAS) return false;
-		if (!alcancaParaYurt(mapa, destino)) return false;
-		if (r.getItem(Mapa.YURT) < 1) return false;
-		ArrayList<Integer> yurts = mapa.yurtsEm(destino);
-		if (yurts.size() >= mapa.capacidadeDeYurts(destino)) return false;
-		r.setItem(Mapa.YURT, r.getItem(Mapa.YURT) - 1);
-		yurts.add(this.indice);
-		int regiao = mapa.getRegiao(destino);
+	// So coloca a peca: quem cobra a ficha de yurt (real ou virtual) e o Manager.
+	boolean colocarYurt (Mapa mapa, int parada) {
+		if (!podeColocarYurt(mapa, parada)) return false;
+		mapa.yurtsEm(parada).add(this.indice);
+		yurtsRestantes--;
+		int regiao = mapa.getRegiao(parada);
 		yurtsPorRegiao.set(regiao, yurtsPorRegiao.get(regiao) + 1);
 		return true;
 	}
 
-	boolean pegarTributo (Mapa mapa, int idPote) {
-		if (mapa == null || idPote < 0 || idPote >= mapa.coletaveis.size()) return false;
-		if (!(mapa.coletaveis.get(idPote) instanceof PoteDeRecursos)) return false;
-		PoteDeRecursos pote = (PoteDeRecursos) mapa.coletaveis.get(idPote);
-		if (r.getItem(Mapa.MAOZINHA) < 1) return false;
-		if (!mapa.alcanca(this.parada, idPote)) return false;
-		if (!pote.retirar()) return false;
-		r.setItem(Mapa.MAOZINHA, r.getItem(Mapa.MAOZINHA) - 1);
-		r.setItem(pote.getTipo(), r.getItem(pote.getTipo()) + 1);
-		return true;
+	// O yurt no centro da cidade conta para a regiao, mas nao ajuda no movimento.
+	void conquistarCidade (int regiao) {
+		cidadesConquistadas++;
+		if (yurtsRestantes < 1) return;
+		yurtsRestantes--;
+		yurtsPorRegiao.set(regiao, yurtsPorRegiao.get(regiao) + 1);
 	}
 
-	boolean entregarAoConselheiro (Mapa mapa, int idConselheiro) {
-		if (mapa == null || idConselheiro < 0 || idConselheiro >= mapa.coletaveis.size()) return false;
-		if (!(mapa.coletaveis.get(idConselheiro) instanceof Conselheiro)) return false;
-		Conselheiro conselheiro = (Conselheiro) mapa.coletaveis.get(idConselheiro);
-		if (!mapa.alcanca(this.parada, idConselheiro)) return false;
-		int sobra = 0;
-		for (int i = 0; i < 12; i++) {
-			if (r.getItem(i) < conselheiro.getPedido(i)) return false;
-			if (i >= Mapa.GRAOS && i <= Mapa.VACA) sobra += r.getItem(i) - conselheiro.getPedido(i);
-		}
-		if (sobra < conselheiro.getQuaisquer()) return false;
-		for (int i = 0; i < 12; i++)
-			r.setItem(i, r.getItem(i) - conselheiro.getPedido(i));
-		int faltam = conselheiro.getQuaisquer();
-		for (int i = Mapa.GRAOS; i <= Mapa.VACA && faltam > 0; i++) {
-			int gasto = Math.min(faltam, r.getItem(i));
-			r.setItem(i, r.getItem(i) - gasto);
-			faltam -= gasto;
-		}
-		r.setItem(Mapa.VOTO, r.getItem(Mapa.VOTO) + conselheiro.getPontuacao());
-		conselheiro.registrarEntrega();
-		return true;
+	void receberBonus (int bonus) {
+		pecasDeBonus++;
+		bonusRecebidos.add(bonus);
 	}
-	
+
+	ArrayList<Integer> getBonusRecebidos () {
+		return new ArrayList<Integer>(bonusRecebidos);
+	}
+
+	int getYurtsRestantes () { return yurtsRestantes; }
+
+	int getConselheiroSecreto () { return conselheiroSecreto; }
+
+	void setConselheiroSecreto (int carta) { conselheiroSecreto = carta; }
+
+	int getIndiceDoHerdeiro () { return herdeiro; }
+
+	int getTesouros () {
+		int total = 0;
+		for (int i = Mapa.GRAOS ; i <= Mapa.VACA ; i++) total += r.getItem(i);
+		return total;
+	}
 }

@@ -37,6 +37,35 @@ class Quest {
 		this.demanda = new HashMap<TipoCondicao, Integer>(demanda);
 	}
 
+	// As 14 cartas de conselheiro aberto. A chave e o identificador da carta,
+	// que a view usa para achar a imagem.
+	static HashMap<Integer, Quest> criarCartas() {
+		HashMap<Integer, Quest> cartas = new HashMap<Integer, Quest>();
+		cartas.put(0, new Quest(TipoCondicao.ESPADAS, 4));
+		cartas.put(1, new Quest(TipoCondicao.YURTS_NO_MAPA, 6));
+		cartas.put(2, new Quest(TipoCondicao.YURTS_NO_MAPA, 10));
+		cartas.put(3, new Quest(TipoCondicao.TESOUROS, 4));
+		cartas.put(4, new Quest(yurtsEmCadaRegiao(2)));
+		cartas.put(5, new Quest(yurtsEmCadaRegiao(1)));
+		cartas.put(6, new Quest(TipoCondicao.PECAS_DE_BONUS, 2));
+		cartas.put(7, new Quest(TipoCondicao.PECAS_DE_BONUS, 3));
+		cartas.put(8, new Quest(TipoCondicao.TESOUROS_DIFERENTES, 5));
+		cartas.put(9, new Quest(TipoCondicao.CIDADES_CONQUISTADAS, 3));
+		cartas.put(10, new Quest(TipoCondicao.CIDADES_CONQUISTADAS, 2));
+		cartas.put(11, new Quest(TipoCondicao.LINHAS_DE_MELHORIA, 1));
+		cartas.put(12, new Quest(TipoCondicao.MELHORIAS_NA_MESMA_COLUNA, 4));
+		cartas.put(13, new Quest(TipoCondicao.COLUNAS_COM_DUAS_MELHORIAS, 2));
+		return cartas;
+	}
+
+	private static HashMap<TipoCondicao, Integer> yurtsEmCadaRegiao(int quantidade) {
+		HashMap<TipoCondicao, Integer> d = new HashMap<TipoCondicao, Integer>();
+		d.put(TipoCondicao.YURTS_NA_CHINA, quantidade);
+		d.put(TipoCondicao.YURTS_NA_RUSSIA, quantidade);
+		d.put(TipoCondicao.YURTS_NA_PERSIA, quantidade);
+		return d;
+	}
+
 	private static HashMap<TipoCondicao, Integer> umaCondicao(TipoCondicao condicao, int quantidade) {
 		if (condicao == null) throw new IllegalArgumentException("condicao obrigatoria");
 		HashMap<TipoCondicao, Integer> d = new HashMap<TipoCondicao, Integer>();

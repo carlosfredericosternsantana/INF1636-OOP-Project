@@ -88,6 +88,11 @@ class Mapa {
         {31, 1,  2, 0, 0, 0, 0,  0},
         {KARAKORUM, 2,  0, 0, 1, 1, 1,  0}
     };
+    // ordem em coletaveis: 12 potes, 9 cidades e 7 conselheiros
+    static final int NUM_POTES = POTES.length;
+    static final int NUM_CIDADES = CIDADES.length;
+    static final int PRIMEIRA_CIDADE = NUM_POTES;
+
     protected ArrayList<HashMap<String,Object>> paradas;
     Mapa() {
         paradas = new ArrayList<HashMap<String,Object>>();
@@ -172,6 +177,27 @@ class Mapa {
 
     boolean alcanca(int parada, int idx) {
         return coletaveisDe(parada).contains(idx);
+    }
+
+    static int regiaoDaCidade(int cidade) {
+        return regiaoDe(CIDADES[cidade][0]);
+    }
+
+    ArrayList<Integer> paradasDeConselheiro() {
+        ArrayList<Integer> lista = new ArrayList<Integer>();
+        for (int[] c : CONSELHEIROS) lista.add(c[0]);
+        return lista;
+    }
+
+    // Indice em coletaveis do conselheiro da parada, ou -1 se nao houver um ali.
+    int conselheiroEm(int parada) {
+        for (int idx : coletaveisDe(parada))
+            if (coletaveis.get(idx) instanceof Conselheiro) return idx;
+        return -1;
+    }
+
+    int getPosKhan() {
+        return posKhan;
     }
 
     boolean moverKhan(int pos) {
