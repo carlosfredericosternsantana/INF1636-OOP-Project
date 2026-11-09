@@ -17,7 +17,7 @@ import model.Fachada;
 import model.ObservadoIF;
 import model.ObservadorIF;
 
-// Janela de cartas, aberta e fechada pelo botao "Cartas": conselheiros abertos
+// Janela de cartas, aberta e fechada pelo botao "Cartas" e pelo Observer: conselheiros abertos
 // ainda em jogo, o conselheiro secreto e as pecas de bonus do jogador da vez.
 // As imagens sao achadas pelo identificador que o model da a cada carta.
 public class JanelaCartas extends JFrame implements ObservadorIF {
@@ -36,9 +36,15 @@ public class JanelaCartas extends JFrame implements ObservadorIF {
 		Controlador.getInstancia().registra(this);
 	}
 
+	// Observer: a janela reflete o estado da partida. Uma entrega ao conselheiro
+	// (evento CARTAS) muda as cartas e as pecas de bonus, entao a janela se abre
+	// para mostra-las. No novo turno ela se fecha, para o conselheiro secreto do
+	// proximo jogador nao aparecer sem ele pedir; no fim da partida tambem.
 	@Override
 	public void notify (ObservadoIF o) {
-		if (o.get(ObservadoIF.EVENTO) == ObservadoIF.FIM) setVisible(false);
+		int evento = o.get(ObservadoIF.EVENTO);
+		if (evento == ObservadoIF.CARTAS) setVisible(true);
+		else if (evento == ObservadoIF.NOVO_TURNO || evento == ObservadoIF.FIM) setVisible(false);
 		painel.repaint();
 	}
 
