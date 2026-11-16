@@ -14,7 +14,6 @@ import javax.swing.JButton;
 import javax.swing.JComboBox;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
-import javax.swing.JMenuItem;
 import javax.swing.JPanel;
 import javax.swing.JPopupMenu;
 import javax.swing.SwingConstants;
@@ -33,6 +32,13 @@ public class JanelaTabuleiro extends JFrame implements ObservadorIF {
 
 	private static final String[] NOMES = PainelTabuleiro.NOMES_DOS_RECURSOS;
 
+	// Texto do botao de habilidade para cada herdeiro. So Altani e Chagatai usam
+	// o botao; os outros usam a habilidade pelos cliques de sempre.
+	private static final String[] HABILIDADES = {
+		"Trocar de peao", "Jochi: escolhe a coluna da melhoria", "Trocar 1 cavalo por 1 espada",
+		"Tolui: yurt tambem em parada vizinha", "Ogedei: moeda por tesouro na cidade"
+	};
+
 	private final Fachada fachada = Fachada.getInstancia();
 	private final PainelTabuleiro painelTabuleiro = new PainelTabuleiro();
 	private final JanelaCartela janelaCartela = new JanelaCartela();
@@ -43,13 +49,16 @@ public class JanelaTabuleiro extends JFrame implements ObservadorIF {
 	private final JLabel rotuloDoTurno = new JLabel();
 	private final JLabel rotuloDoJogador = new JLabel();
 	private final JLabel rotuloDoKurultai = new JLabel();
-	private final JButton botaoDeYurt = botao("Construir yurt aqui", Controlador.YURT);
+	private final JButton botaoDeYurt = botao("Construir yurt", Controlador.YURT);
 	private final JButton botaoDeEntrega = botao("Entregar ao conselheiro", Controlador.ENTREGAR);
+	private final JButton botaoDoTopo = botao("Melhoria do topo da pilha", Controlador.TOPO);
+	private final JButton botaoDeHabilidade = botao("", Controlador.HABILIDADE);
 	private final JButton botaoDaCartela = botao("Cartela", Controlador.CARTELA);
 	private final JButton botaoDeCartas = botao("Cartas", Controlador.CARTAS);
 	private final JComboBox<Integer> seletorDeMovimentos = new JComboBox<Integer>();
 	private final JButton botaoDeDefinir = botao("Definir movimentos", Controlador.DEFINIR);
 	private final JButton botaoDePassar = botao("Passar a vez", Controlador.PASSAR);
+	private final JButton botaoDeSalvar = botao("Salvar partida", Controlador.SALVAR);
 
 	public JanelaTabuleiro () {
 		super("Herdeiros de Khan");
@@ -98,7 +107,7 @@ public class JanelaTabuleiro extends JFrame implements ObservadorIF {
 		}
 
 		controle.add(Box.createVerticalStrut(18));
-		for (JButton botao : new JButton[] { botaoDeYurt, botaoDeEntrega, botaoDaCartela, botaoDeCartas }) {
+		for (JButton botao : new JButton[] { botaoDeYurt, botaoDeEntrega, botaoDoTopo, botaoDeHabilidade, botaoDaCartela, botaoDeCartas }) {
 			controle.add(botao);
 			controle.add(Box.createVerticalStrut(6));
 		}
@@ -115,6 +124,8 @@ public class JanelaTabuleiro extends JFrame implements ObservadorIF {
 		controle.add(botaoDeDefinir);
 
 		controle.add(Box.createVerticalGlue());
+		controle.add(botaoDeSalvar);
+		controle.add(Box.createVerticalStrut(6));
 		botaoDePassar.setMaximumSize(new Dimension(Integer.MAX_VALUE, 52));
 		controle.add(botaoDePassar);
 		return controle;
@@ -128,30 +139,40 @@ public class JanelaTabuleiro extends JFrame implements ObservadorIF {
 
 	public void alternarCartas () { janelaCartas.setVisible(!janelaCartas.isVisible()); }
 
+	// Destaca as paradas onde da para construir o yurt; o proximo clique escolhe.
+	public void escolherParadaDoYurt () { painelTabuleiro.setEscolhendoYurt(true); }
+
+	public void mostrarColunasParaOTopo () {
+		painelTabuleiro.mostrarColunas(Fachada.TOPO_DA_PILHA, painelTabuleiro.getWidth() / 2, painelTabuleiro.getHeight() / 2);
+	}
+
+	// Fecha junto as janelas da cartela e das cartas.
+	@Override
+	public void dispose () {
+		janelaCartela.dispose();
+		janelaCartas.dispose();
+		super.dispose();
+	}
+
 	// Menu com os tesouros sacados pela peca de bonus; o jogador fica com um.
 	public void mostrarEscolhaDeTesouro () {
 		JPopupMenu menu = new JPopupMenu("Escolha um tesouro");
-		for (int tipo : fachada.getTesourosParaEscolher()) {
-			JMenuItem item = new JMenuItem("Ficar com " + NOMES[tipo]);
-			item.setActionCommand(Controlador.TESOURO + tipo);
-			item.addActionListener(Controlador.getInstancia());
-			menu.add(item);
-		}
+		for (int tipo : fachada.getTesourosParaEscolher())
+			menu.add(PainelTabuleiro.item("Ficar com " + NOMES[tipo], Controlador.TESOURO + tipo));
 		menu.show(painelTabuleiro, painelTabuleiro.getWidth() / 2, painelTabuleiro.getHeight() / 2);
 	}
 
+	// O resultado do fim da partida fica com o Controlador.
 	@Override
 	public void notify (ObservadoIF o) {
-		int evento = o.get(ObservadoIF.EVENTO);
 		atualizar();
-		if (evento == ObservadoIF.ESCOLHA) mostrarEscolhaDeTesouro();
-		else if (evento == ObservadoIF.FIM) new JanelaResultado().setVisible(true);
+		if (o.get(ObservadoIF.EVENTO) == ObservadoIF.ESCOLHA) mostrarEscolhaDeTesouro();
 	}
 
 	private void atualizar () {
 		int vez = fachada.getVez();
 		painelDaVez.setBackground(PainelTabuleiro.CORES[vez % PainelTabuleiro.CORES.length]);
-		rotuloDaVez.setText("Vez de " + fachada.getHerdeiro(vez));
+		rotuloDaVez.setText("Vez de " + fachada.getNome(vez));
 		rotuloDeMovimentos.setText(fachada.getMovimentos() + " movimento(s)");
 
 		String coluna = fachada.getColunaAtivada() == Fachada.NENHUMA_COLUNA ? "escolha uma coluna na cartela" : "coluna ativada";
@@ -168,12 +189,16 @@ public class JanelaTabuleiro extends JFrame implements ObservadorIF {
 
 		StringBuilder kurultai = new StringBuilder("<html><b>Kurultai</b> (" + fachada.getTotalDeVotos() + " votos)");
 		for (int j = 0; j < fachada.getQuantidadeDeJogadores(); j++)
-			kurultai.append("<br>").append(fachada.getHerdeiro(j)).append(": ").append(fachada.getVotos(j));
+			kurultai.append("<br>").append(PainelTabuleiro.nomeDoJogador(j)).append(": ").append(fachada.getVotos(j));
 		rotuloDoKurultai.setText(kurultai.append("</html>").toString());
 
 		boolean emJogo = !fachada.isTerminada();
-		botaoDeYurt.setEnabled(fachada.podeConstruirYurt());
+		botaoDeYurt.setEnabled(!fachada.getParadasParaYurt().isEmpty());
 		botaoDeEntrega.setEnabled(fachada.podeEntregar());
+		botaoDoTopo.setEnabled(fachada.podeComprarDoTopo());
+		botaoDeHabilidade.setText(HABILIDADES[fachada.getIndiceDoHerdeiro(vez)]);
+		botaoDeHabilidade.setEnabled(fachada.podeUsarHabilidade());
+		botaoDeSalvar.setEnabled(fachada.podeSalvar());
 		botaoDeDefinir.setEnabled(emJogo);
 		botaoDePassar.setEnabled(fachada.podePassarVez());
 	}

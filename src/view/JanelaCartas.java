@@ -85,11 +85,11 @@ public class JanelaCartas extends JFrame implements ObservadorIF {
 						LARGURA_DA_CARTA, ALTURA_DA_CARTA, null);
 
 			int xSecreta = MARGEM + 4 * (LARGURA_DA_CARTA + MARGEM) + MARGEM;
-			g2.drawString("Secreto de " + fachada.getHerdeiro(vez), xSecreta, TOPO - 12);
+			g2.drawString("Secreto de " + fachada.getNome(vez), xSecreta, TOPO - 12);
 			g2.drawImage(secretas[fachada.getConselheiroSecreto(vez)], xSecreta, TOPO, LARGURA_DA_CARTA, ALTURA_DA_CARTA, null);
 
 			int yBonus = TOPO + ALTURA_DA_CARTA + 50;
-			g2.drawString("Pecas de bonus de " + fachada.getHerdeiro(vez), MARGEM, yBonus - 12);
+			g2.drawString("Pecas de bonus de " + fachada.getNome(vez), MARGEM, yBonus - 12);
 			ArrayList<Integer> pecas = fachada.getPecasDeBonus(vez);
 			for (int i = 0; i < pecas.size(); i++)
 				g2.drawImage(bonus[pecas.get(i)], MARGEM + i * (TAMANHO_DO_BONUS + MARGEM), yBonus,

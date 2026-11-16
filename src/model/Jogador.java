@@ -1,12 +1,14 @@
 package model;
-import model.Recurso;
 
+import java.text.Normalizer;
 import java.util.ArrayList;
 
 class Jogador {
 
 	static final int VERMELHA = 0, VERDE = 1, AMARELA = 2, BRANCA = 3;
 	static final int SEM_HERDEIRO = -1;
+	static final int ALTANI = 0, JOCHI = 1, CHAGATAI = 2, TOLUI = 3, OGEDEI = 4;
+	static final int SEM_PEAO = -1;
 	static final int YURTS_POR_JOGADOR = 12;
 
 	static final String[] HERDEIROS = { "Altani", "Jochi", "Chagatai", "Tolui", "Ogedei" };
@@ -29,6 +31,8 @@ class Jogador {
 	protected int indice;
 	protected int herdeiro;
 	protected int parada = Mapa.KARAKORUM;
+	protected int outraParada = SEM_PEAO;      // 2o peao de Altani, parado neste turno
+	protected String nome = "";
 	protected int yurtsRestantes = YURTS_POR_JOGADOR;
 	protected int melhoriasGratis = 0;      // ganhas ao completar linhas, vao para a coluna branca
 	protected int conselheiroSecreto = -1;
@@ -52,6 +56,7 @@ class Jogador {
 		this.pecasDeBonus = 0 ;
 		this.cidadesConquistadas = 0;
 		this.r = new Recurso();
+		if (herdeiro == ALTANI) outraParada = Mapa.KARAKORUM;
 		for (int i = 0 ; i < 4 ; i++) {
 			colunas.add(new Recurso());
 			melhoriasPorColuna.add(0);
@@ -71,6 +76,27 @@ class Jogador {
 	String getHerdeiro () {
 		if (herdeiro < 0 || herdeiro >= HERDEIROS.length) return "Jogador " + (indice + 1);
 		return HERDEIROS[herdeiro];
+	}
+
+	// Nome digitado pelo jogador; em branco, vale o nome do herdeiro.
+	String getNome () {
+		return nome.isEmpty() ? getHerdeiro() : nome;
+	}
+
+	// Sem acentos: o arquivo da partida salva tem de ser ASCII puro.
+	void setNome (String nome) {
+		this.nome = Normalizer.normalize(nome.trim(), Normalizer.Form.NFD).replaceAll("[^\\p{ASCII}]", "");
+	}
+
+	int getOutraParada () {
+		return outraParada;
+	}
+
+	// Altani escolhe qual dos 2 peoes vai jogar: o ativo e sempre o de getParada().
+	void trocarPeao () {
+		int ativa = parada;
+		parada = outraParada;
+		outraParada = ativa;
 	}
 	
 	boolean colunaDisponivel (int coluna) {

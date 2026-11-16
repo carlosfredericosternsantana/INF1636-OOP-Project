@@ -12,12 +12,13 @@ import javax.swing.SwingConstants;
 
 import model.Fachada;
 
-// Resultado da partida: votos do Kurultai, votos de influencia e o vencedor.
+// Resultado da partida: votos do Kurultai, de influencia e do conselheiro
+// secreto, e o vencedor.
 public class JanelaResultado extends JFrame {
 
 	private static final long serialVersionUID = 1L;
 
-	private static final String[] COLUNAS = { "Herdeiro", "Kurultai", "Influencia", "Total", "Tesouros" };
+	private static final String[] COLUNAS = { "Jogador", "Kurultai", "Influencia", "Secreto", "Total", "Tesouros" };
 
 	public JanelaResultado () {
 		super("Fim da partida");
@@ -27,11 +28,12 @@ public class JanelaResultado extends JFrame {
 		JPanel tabela = new JPanel(new GridLayout(jogadores + 1, COLUNAS.length, 16, 6));
 		for (String coluna : COLUNAS) tabela.add(negrito(new JLabel(coluna)));
 		for (int j = 0; j < jogadores; j++) {
-			JLabel nome = new JLabel(fachada.getHerdeiro(j));
+			JLabel nome = new JLabel(PainelTabuleiro.nomeDoJogador(j));
 			nome.setForeground(PainelTabuleiro.CORES[j]);
 			tabela.add(negrito(nome));
 			tabela.add(new JLabel(String.valueOf(fachada.getVotos(j))));
 			tabela.add(new JLabel(String.valueOf(fachada.getVotosDeInfluencia(j))));
+			tabela.add(new JLabel(String.valueOf(fachada.getVotosDoSecreto(j))));
 			tabela.add(new JLabel(String.valueOf(fachada.getVotosFinais(j))));
 			tabela.add(new JLabel(String.valueOf(fachada.getTesouros(j))));
 		}
@@ -40,7 +42,7 @@ public class JanelaResultado extends JFrame {
 		StringBuilder texto = new StringBuilder(vencedores.size() > 1 ? "Empate: " : "Novo Khan: ");
 		for (int i = 0; i < vencedores.size(); i++) {
 			if (i > 0) texto.append(" e ");
-			texto.append(fachada.getHerdeiro(vencedores.get(i)));
+			texto.append(fachada.getNome(vencedores.get(i)));
 		}
 		JLabel vencedor = new JLabel(texto.toString(), SwingConstants.CENTER);
 		vencedor.setFont(vencedor.getFont().deriveFont(Font.BOLD, 22f));

@@ -1,0 +1,16 @@
+Trabalho de INF1636 - Herdeiros de Khan
+Prof. Ivan Mathias Filho
+
+Componentes do grupo:
+  2511920 - NOME A PREENCHER
+  2410876 - NOME A PREENCHER
+  2510091 - NOME A PREENCHER
+
+Classe com o metodo main: Principal (pacote padrao, arquivo src/Principal.java)
+
+Testes (JUnit 4): tests/model/TodosOsTestes.java
+
+Salvamento e recuperacao: o botao "Salvar partida" do tabuleiro fica
+habilitado apenas antes da primeira acao de cada turno e grava a partida num
+arquivo texto (.txt, ASCII) escolhido pelo JFileChooser. O botao "Continuar
+partida salva" da janela inicial le esse arquivo.

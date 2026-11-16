@@ -27,7 +27,7 @@ public class JanelaCartela extends JFrame implements ObservadorIF {
 
 	private void atualizarTitulo () {
 		Fachada fachada = Fachada.getInstancia();
-		setTitle("Cartela de " + fachada.getHerdeiro(fachada.getVez()) + " - clique numa coluna para ativa-la");
+		setTitle("Cartela de " + PainelTabuleiro.nomeDoJogador(fachada.getVez()) + " - clique numa coluna para ativa-la");
 	}
 
 	@Override

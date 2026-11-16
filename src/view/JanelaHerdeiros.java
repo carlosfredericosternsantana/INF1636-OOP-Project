@@ -10,12 +10,14 @@ import javax.swing.JComboBox;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.JTextField;
 import javax.swing.SwingConstants;
 
 import controller.Controlador;
 import model.Fachada;
 
-// 2a janela: quantos jogadores e qual herdeiro cada cor vai assumir.
+// 2a janela: quantos jogadores, qual herdeiro cada cor vai assumir e, se
+// quiserem, o nome de cada jogador.
 public class JanelaHerdeiros extends JFrame {
 
 	private static final long serialVersionUID = 1L;
@@ -24,6 +26,7 @@ public class JanelaHerdeiros extends JFrame {
 
 	private final JComboBox<Integer> seletorDeQuantidade = new JComboBox<Integer>();
 	private final JComboBox<String>[] seletoresDeHerdeiro;
+	private final JTextField[] camposDeNome = new JTextField[Fachada.MAX_JOGADORES];
 	private final JLabel aviso = new JLabel(" ", SwingConstants.CENTER);
 
 	@SuppressWarnings("unchecked")
@@ -35,17 +38,20 @@ public class JanelaHerdeiros extends JFrame {
 		seletorDeQuantidade.setActionCommand(Controlador.QUANTIDADE);
 		seletorDeQuantidade.addActionListener(controlador);
 
-		JPanel grade = new JPanel(new GridLayout(Fachada.MAX_JOGADORES + 1, 2, 8, 8));
+		JPanel grade = new JPanel(new GridLayout(Fachada.MAX_JOGADORES + 1, 3, 8, 8));
 		grade.add(new JLabel("Jogadores:"));
 		grade.add(seletorDeQuantidade);
+		grade.add(new JLabel("Nome (opcional)"));
 		seletoresDeHerdeiro = new JComboBox[Fachada.MAX_JOGADORES];
 		for (int i = 0; i < seletoresDeHerdeiro.length; i++) {
 			JLabel cor = new JLabel("Jogador " + NOMES_DAS_CORES[i]);
 			cor.setForeground(PainelTabuleiro.CORES[i]);
 			seletoresDeHerdeiro[i] = new JComboBox<String>(Fachada.getHerdeiros());
 			seletoresDeHerdeiro[i].setSelectedIndex(i);
+			camposDeNome[i] = new JTextField(12);
 			grade.add(cor);
 			grade.add(seletoresDeHerdeiro[i]);
+			grade.add(camposDeNome[i]);
 		}
 
 		JButton comecar = new JButton("Comecar");
@@ -67,11 +73,21 @@ public class JanelaHerdeiros extends JFrame {
 
 	public void atualizarQuantidade () {
 		int quantidade = getQuantidade();
-		for (int i = 0; i < seletoresDeHerdeiro.length; i++) seletoresDeHerdeiro[i].setEnabled(i < quantidade);
+		for (int i = 0; i < seletoresDeHerdeiro.length; i++) {
+			seletoresDeHerdeiro[i].setEnabled(i < quantidade);
+			camposDeNome[i].setEnabled(i < quantidade);
+		}
 	}
 
 	private int getQuantidade () {
 		return ((Integer) seletorDeQuantidade.getSelectedItem()).intValue();
+	}
+
+	// Em branco, o jogador fica com o nome do herdeiro.
+	public String[] getNomes () {
+		String[] nomes = new String[getQuantidade()];
+		for (int i = 0; i < nomes.length; i++) nomes[i] = camposDeNome[i].getText();
+		return nomes;
 	}
 
 	// Cada tabuleiro de jogador e unico, entao dois jogadores nao podem ter o mesmo herdeiro.

@@ -1,5 +1,10 @@
 package model;
 
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
+import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.ArrayList;
 
 // Unica porta de entrada do model (Singleton + Facade): a view e o controller
@@ -13,6 +18,8 @@ public class Fachada {
 	public static final int NUM_COLUNAS = Melhorias.NUM_COLUNAS;
 	public static final int LINHAS_DA_CARTELA = Melhorias.LINHAS;
 	public static final int ESPACOS_DE_MELHORIA = Melhorias.TAMANHO_TRILHA;
+	public static final int TOPO_DA_PILHA = Melhorias.EMBARALHADA;
+	public static final int SEM_PEAO = Jogador.SEM_PEAO;
 	public static final int MAX_JOGADORES = Manager.MAX_JOGADORES;
 	public static final int VERMELHA = Jogador.VERMELHA;
 	public static final int VERDE = Jogador.VERDE;
@@ -37,7 +44,42 @@ public class Fachada {
 
 	public static String[] getHerdeiros () { return Jogador.HERDEIROS.clone(); }
 
-	public void novaPartida (int[] herdeiros) { manager = new Manager(herdeiros); }
+	public void novaPartida (int[] herdeiros, String[] nomes) {
+		manager = new Manager(herdeiros);
+		for (int j = 0; j < nomes.length; j++) manager.getJogador(j).setNome(nomes[j]);
+	}
+
+	// ---------- salvamento e recuperacao (arquivo texto ASCII) ----------
+
+	public boolean podeSalvar () { return manager.podeSalvar(); }
+
+	public void salvarPartida (File arquivo) throws IOException {
+		try (PrintWriter out = new PrintWriter(arquivo, "US-ASCII")) {
+			manager.salvar(out);
+			if (out.checkError()) throw new IOException("erro ao gravar " + arquivo.getName());
+		}
+	}
+
+	// Se o arquivo for invalido, a partida atual nao muda.
+	public void carregarPartida (File arquivo) throws IOException {
+		try (BufferedReader in = new BufferedReader(new FileReader(arquivo))) {
+			manager = Manager.carregar(in);
+		} catch (RuntimeException erro) {
+			throw new IOException("arquivo de partida invalido", erro);
+		}
+	}
+
+	// ---------- escolhas antes da 1a rodada ----------
+
+	public int getJogadorEscolhendo () { return manager.getJogadorEscolhendo(); }
+
+	public int getOpcaoDeSecreto (int jogador, int opcao) { return manager.getOpcaoDeSecreto(jogador, opcao); }
+
+	public int getTipoDaOpcaoDeMelhoria (int opcao) { return manager.getOpcaoDeMelhoria(opcao).getTipo(); }
+
+	public int getCorDaOpcaoDeMelhoria (int opcao) { return manager.getOpcaoDeMelhoria(opcao).getCor(); }
+
+	public boolean escolherNoInicio (int opcao) { return manager.escolherNoInicio(opcao); }
 
 	public void registra (ObservadorIF o) { manager.add(o); }
 
@@ -51,9 +93,14 @@ public class Fachada {
 
 	public String getHerdeiro (int jogador) { return manager.getJogador(jogador).getHerdeiro(); }
 
+	public String getNome (int jogador) { return manager.getJogador(jogador).getNome(); }
+
 	public int getIndiceDoHerdeiro (int jogador) { return manager.getJogador(jogador).getIndiceDoHerdeiro(); }
 
 	public int getParada (int jogador) { return manager.getJogador(jogador).getParada(); }
+
+	// Parada do 2o peao de Altani, ou SEM_PEAO.
+	public int getOutraParada (int jogador) { return manager.getJogador(jogador).getOutraParada(); }
 
 	public int getRecurso (int jogador, int tipo) { return manager.getJogador(jogador).getRecurso().getItem(tipo); }
 
@@ -85,7 +132,15 @@ public class Fachada {
 
 	public ArrayList<Integer> getTesourosParaEscolher () { return manager.getTesourosParaEscolher(); }
 
-	public boolean podeConstruirYurt () { return manager.podeConstruirYurt(); }
+	public ArrayList<Integer> getParadasParaYurt () { return manager.paradasParaYurt(); }
+
+	public boolean escolheColunaDaMelhoria () { return manager.escolheColunaDaMelhoria(); }
+
+	public boolean podeComprarDoTopo () { return manager.podeComprarDoTopo(); }
+
+	public boolean podeUsarHabilidade () { return manager.podeUsarHabilidade(); }
+
+	public boolean podeTomarComMoeda (int cidade) { return manager.podeTomarComMoeda(cidade); }
 
 	public boolean podeEntregar () { return manager.podeEntregar(); }
 
@@ -154,11 +209,16 @@ public class Fachada {
 
 	public boolean colocarKhan (int posicao) { return manager.colocarKhan(posicao); }
 
-	public boolean comprarMelhoria (int espaco) { return manager.comprarMelhoria(espaco); }
+	// espaco 1 a 5 ou TOPO_DA_PILHA; colunaDeJochi so vale para Jochi.
+	public boolean comprarMelhoria (int espaco, int colunaDeJochi) { return manager.comprarMelhoria(espaco, colunaDeJochi); }
 
 	public boolean atacarCidade (int cidade, int tesouro) { return manager.atacarCidade(cidade, tesouro); }
 
-	public boolean construirYurt () { return manager.construirYurt(); }
+	public boolean construirYurt (int parada) { return manager.construirYurt(parada); }
+
+	public boolean usarHabilidade () { return manager.usarHabilidade(); }
+
+	public boolean tomarComMoeda (int cidade, int tesouro) { return manager.tomarComMoeda(cidade, tesouro); }
 
 	public boolean entregarAoConselheiro () { return manager.entregarAoConselheiro(); }
 
@@ -171,6 +231,8 @@ public class Fachada {
 	public boolean isTerminada () { return manager.isTerminada(); }
 
 	public int getVotosDeInfluencia (int jogador) { return manager.votosDeInfluencia(jogador); }
+
+	public int getVotosDoSecreto (int jogador) { return manager.votosDoSecreto(jogador); }
 
 	public int getVotosFinais (int jogador) { return manager.votosFinais(jogador); }
 

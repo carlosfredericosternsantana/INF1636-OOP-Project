@@ -15,6 +15,7 @@ public interface ObservadoIF {
 	int CARTAS = 5;
 	int ESCOLHA = 6;
 	int FIM = 7;
+	int PEAO_TROCADO = 8;
 
 	void add (ObservadorIF o);
 

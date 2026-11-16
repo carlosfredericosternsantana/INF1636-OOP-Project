@@ -4,6 +4,12 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.StringReader;
+import java.io.StringWriter;
+
 import org.junit.Test;
 
 public class ManagerTest {
@@ -107,9 +113,9 @@ public class ManagerTest {
 		Manager manager = new Manager(2);
 		Jogador jogador = manager.getJogadorDaVez();
 		Melhorias melhoria = manager.melhoriaNaPosicao(5);
-		assertFalse("Altani comeca com 1 moeda", manager.comprarMelhoria(5));
+		assertFalse("Altani comeca com 1 moeda", manager.comprarMelhoria(5, -1));
 		jogador.r.setItem(Mapa.MOEDA, 2);
-		assertTrue(manager.comprarMelhoria(5));
+		assertTrue(manager.comprarMelhoria(5, -1));
 		assertEquals("as 2 moedas foram gastas", 0, jogador.r.getItem(Mapa.MOEDA));
 		assertEquals("a melhoria vai para a coluna da sua cor", 1, jogador.getMelhoriasNaColuna(melhoria.getCor()));
 		assertEquals("as restantes andam para a direita", null, manager.melhoriaNaPosicao(1));
@@ -125,10 +131,11 @@ public class ManagerTest {
 		Manager manager = new Manager(2);
 		Jogador jogador = manager.getJogadorDaVez();
 		jogador.r.setItem(Mapa.YURT, 1);
-		assertFalse("Karakorum nao aceita yurt", manager.construirYurt());
+		assertFalse("Karakorum nao aceita yurt", manager.construirYurt(Mapa.KARAKORUM));
 		manager.definirMovimentos(1);
 		assertTrue(manager.mover(6));
-		assertTrue(manager.construirYurt());
+		assertFalse("Altani nao e Tolui: so na parada atual", manager.construirYurt(7));
+		assertTrue(manager.construirYurt(6));
 		assertEquals("a ficha de yurt foi gasta", 0, jogador.r.getItem(Mapa.YURT));
 		assertEquals("saiu um yurt do estoque", Jogador.YURTS_POR_JOGADOR - 1, jogador.getYurtsRestantes());
 		assertTrue(manager.getMapa().yurtsEm(6).contains(jogador.getIndice()));
@@ -201,5 +208,130 @@ public class ManagerTest {
 		assertEquals("A: 1o empatado na China (3) e 2o na Russia (1)", 4, manager.votosDeInfluencia(0));
 		assertEquals("B: 1o empatado na China sem melhorias", 1, manager.votosDeInfluencia(1));
 		assertEquals("C: ninguem e 2o na China; 1o na Russia", 1, manager.votosDeInfluencia(2));
+	}
+
+	// ---------- 4a iteracao ----------
+
+	private static String salvar (Manager manager) {
+		StringWriter texto = new StringWriter();
+		PrintWriter out = new PrintWriter(texto);
+		manager.salvar(out);
+		out.flush();
+		return texto.toString();
+	}
+
+	// 5 jogadores: Altani, Jochi, Chagatai, Tolui e Ogedei.
+	@Test(timeout = TEMPO)
+	public void partidaSalvaVoltaIgualAoCarregar() throws IOException {
+		Manager manager = new Manager(5);
+		while (manager.getJogadorEscolhendo() >= 0) assertTrue(manager.escolherNoInicio(0));
+		manager.getJogador(4).setNome("Jo\u00e3o Paulo");
+		assertTrue(manager.ativarColuna(Jogador.VERMELHA));
+		assertFalse("depois da 1a acao nao da para salvar", manager.podeSalvar());
+		assertTrue(manager.colocarKhan(2));
+		assertTrue(manager.mover(6));
+		assertTrue(manager.pegarTributo(3));
+		manager.passarVez();
+		assertTrue("no inicio do turno da para salvar", manager.podeSalvar());
+		String salvo = salvar(manager);
+		Manager carregado = Manager.carregar(new BufferedReader(new StringReader(salvo)));
+		assertEquals("gravar a partida carregada da o mesmo arquivo", salvo, salvar(carregado));
+		assertEquals(1, carregado.getVez());
+		assertEquals("o nome fica sem acento (ASCII)", "Joao Paulo", carregado.getJogador(4).getNome());
+		assertEquals(6, carregado.getJogador(0).getParada());
+		assertEquals("2o peao de Altani", Mapa.KARAKORUM, carregado.getJogador(0).getOutraParada());
+	}
+
+	@Test(timeout = TEMPO, expected = IOException.class)
+	public void arquivoQueNaoEPartidaNaoCarrega() throws IOException {
+		Manager.carregar(new BufferedReader(new StringReader("vez 2\n")));
+	}
+
+	@Test(timeout = TEMPO)
+	public void altaniEscolheQualDosDoisPeoesJoga() {
+		Manager manager = new Manager(2);
+		Jogador altani = manager.getJogadorDaVez();
+		manager.definirMovimentos(1);
+		assertTrue(manager.mover(6));
+		manager.passarVez();
+		manager.passarVez();
+		assertTrue("antes de jogar Altani troca de peao", manager.usarHabilidade());
+		assertEquals("o peao de Karakorum e o ativo", Mapa.KARAKORUM, altani.getParada());
+		assertTrue("trocar de peao nao impede salvar", manager.podeSalvar());
+		manager.definirMovimentos(1);
+		assertFalse("o outro peao de Altani ocupa a parada 6", manager.mover(6));
+		assertFalse("depois de comecar a jogar nao troca mais", manager.podeUsarHabilidade());
+	}
+
+	@Test(timeout = TEMPO)
+	public void jochiComecaComMelhoriaNaBrancaEEscolheAColuna() {
+		Manager manager = new Manager(2);
+		assertTrue(manager.escolherNoInicio(0));
+		assertTrue(manager.escolherNoInicio(1));
+		assertEquals("falta a melhoria inicial de Jochi", 1, manager.getJogadorEscolhendo());
+		Melhorias escolhida = manager.getOpcaoDeMelhoria(1);
+		assertTrue(manager.escolherNoInicio(1));
+		assertEquals("todos escolheram", -1, manager.getJogadorEscolhendo());
+		Jogador jochi = manager.getJogador(1);
+		assertEquals(escolhida, jochi.melhoriasNaCartela.get(Jogador.BRANCA).get(0));
+		manager.passarVez();
+		jochi.r.setItem(Mapa.MOEDA, 4);
+		int outraCor = (manager.melhoriaNaPosicao(5).getCor() + 1) % 3;
+		assertFalse("so nas colunas coloridas", manager.comprarMelhoria(5, Jogador.BRANCA));
+		assertTrue("Jochi nao segue a cor", manager.comprarMelhoria(5, outraCor));
+		assertEquals(1, jochi.getMelhoriasNaColuna(outraCor));
+		assertTrue("compra do topo da pilha", manager.comprarMelhoria(Melhorias.EMBARALHADA, outraCor));
+		assertEquals(2, jochi.getMelhoriasNaColuna(outraCor));
+		assertEquals("4 moedas gastas", 0, jochi.r.getItem(Mapa.MOEDA));
+	}
+
+	@Test(timeout = TEMPO)
+	public void habilidadesDeChagataiToluiEOgedei() {
+		Manager manager = new Manager(5);
+		manager.passarVez();
+		manager.passarVez();
+		manager.definirMovimentos(2);
+		assertTrue("Chagatai troca cavalo por espada", manager.usarHabilidade());
+		assertEquals(1, manager.getMovimentos());
+		assertEquals(1, manager.getJogadorDaVez().r.getItem(Mapa.ESPADA));
+		assertFalse("so 1x por turno", manager.usarHabilidade());
+		manager.passarVez();
+
+		Jogador tolui = manager.getJogadorDaVez();
+		assertTrue("Tolui comeca com yurt em Karakorum", manager.getMapa().yurtsEm(Mapa.KARAKORUM).contains(tolui.getIndice()));
+		assertEquals(Jogador.YURTS_POR_JOGADOR - 1, tolui.getYurtsRestantes());
+		tolui.r.setItem(Mapa.YURT, 1);
+		assertTrue("Tolui constroi na vizinha sem sair de Karakorum", manager.construirYurt(6));
+		manager.passarVez();
+
+		Jogador ogedei = manager.getJogadorDaVez();
+		int cidade = 0;
+		while (!manager.cidadeRevelada(cidade)) cidade++;
+		int tesouro = Mapa.GRAOS;
+		while (manager.getCidade(cidade).getTesouro(tesouro) == 0) tesouro++;
+		assertTrue("Ogedei toma tesouro de cidade longe", manager.tomarComMoeda(cidade, tesouro));
+		assertEquals("pagou 1 das 2 moedas", 1, ogedei.r.getItem(Mapa.MOEDA));
+		assertEquals(3, manager.getCidade(cidade).totalDeTesouros());
+		assertFalse("so 1x por turno", manager.podeTomarComMoeda(cidade));
+	}
+
+	// Duplas 27 e 28 nao sao vizinhas; 27-1-3 formam uma rede. Provincias do Khan:
+	// pote 0 (paradas 1, 2, 3, 32) e pote 3 (6, 8, 28, 33).
+	@Test(timeout = TEMPO)
+	public void conselheiroSecretoDaVotosNoFim() {
+		Manager manager = new Manager(2);
+		Jogador jogador = manager.getJogador(0);
+		for (int parada : new int[] { 27, 28, 1, 3 }) manager.getMapa().yurtsEm(parada).add(0);
+		jogador.setConselheiroSecreto(6);
+		assertEquals("Mensageiro: 2 duplas", 1, manager.votosDoSecreto(0));
+		jogador.setConselheiroSecreto(2);
+		assertEquals("Viajante: rede de 3", 1, manager.votosDoSecreto(0));
+		jogador.setConselheiroSecreto(9);
+		assertEquals("Bajulador: so a provincia 0 tem 2 yurts", 0, manager.votosDoSecreto(0));
+		manager.getMapa().yurtsEm(Mapa.KARAKORUM).add(0);
+		assertEquals("yurt em Karakorum nao conta para o secreto", 0, manager.votosDoSecreto(0));
+		manager.getMapa().yurtsEm(6).add(0);
+		assertEquals("Bajulador: provincias 0 e 3", 1, manager.votosDoSecreto(0));
+		assertEquals("o secreto entra no total", manager.votosDeInfluencia(0) + 1, manager.votosFinais(0));
 	}
 }

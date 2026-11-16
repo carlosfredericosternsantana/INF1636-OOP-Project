@@ -31,7 +31,6 @@ public class MelhoriasTest {
 		bonus.setItem(Mapa.ESPADA, 1);
 		bonus.setItem(Mapa.MOEDA, 2);
 		Melhorias melhoria = new Melhorias(2, bonus);
-		assertFalse("melhoria embaralhada nao pode ser aplicada", melhoria.aplicar(jogador));
 		melhoria.setPosicao(3);
 		assertTrue("melhoria da trilha deveria ser aplicada", melhoria.aplicar(jogador));
 		assertEquals("moedas na coluna 2", 2, jogador.getColunas(2).getItem(Mapa.MOEDA));

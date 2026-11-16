@@ -24,9 +24,9 @@ public class JanelaInicial extends JFrame {
 		JButton nova = new JButton("Nova partida");
 		nova.setActionCommand(Controlador.NOVA);
 		nova.addActionListener(Controlador.getInstancia());
-		// O salvamento e a recuperacao ficam para a 4a iteracao.
 		JButton continuar = new JButton("Continuar partida salva");
-		continuar.setEnabled(false);
+		continuar.setActionCommand(Controlador.CONTINUAR);
+		continuar.addActionListener(Controlador.getInstancia());
 
 		JPanel painel = new JPanel(new GridLayout(3, 1, 0, 12));
 		painel.setBorder(BorderFactory.createEmptyBorder(24, 40, 24, 40));

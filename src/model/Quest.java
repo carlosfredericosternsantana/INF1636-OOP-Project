@@ -101,11 +101,9 @@ class Quest {
 		}
 	}
 
+	// Todos os yurts que sairam do estoque, inclusive o de Tolui em Karakorum.
 	private static int yurtsNoMapa(Jogador jogador) {
-		int total = 0;
-		for (int regiao = Mapa.CHINA; regiao <= Mapa.PERSIA; regiao++)
-			total += jogador.getYurtsPorRegiao(regiao);
-		return total;
+		return Jogador.YURTS_POR_JOGADOR - jogador.getYurtsRestantes();
 	}
 
 	private static int totalDeTesouros(Recurso mao) {

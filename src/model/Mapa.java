@@ -189,6 +189,13 @@ class Mapa {
         return lista;
     }
 
+    // Provincias com o icone do Khan: a 1a de cada trio de KHAN.
+    static ArrayList<Integer> provinciasDoKhan() {
+        ArrayList<Integer> lista = new ArrayList<Integer>();
+        for (int[] k : KHAN) lista.add(k[0]);
+        return lista;
+    }
+
     // Indice em coletaveis do conselheiro da parada, ou -1 se nao houver um ali.
     int conselheiroEm(int parada) {
         for (int idx : coletaveisDe(parada))

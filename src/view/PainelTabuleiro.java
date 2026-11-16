@@ -36,6 +36,8 @@ public class PainelTabuleiro extends JPanel implements ObservadorIF {
 		"Voto", "Espada", "Punho", "Cavalo", "Khan", "Yurt", "Moeda", "Graos", "Tecido", "Ferro", "Pele", "Vaca"
 	};
 
+	private static final String[] NOMES_DAS_COLUNAS = { "vermelha", "verde", "amarela" };
+
 	// Centro e raio de cada parada, na ordem do model:
 	// 0 a 26 paradas simples, 27 a 32 paradas duplas e 33 Karakorum.
 	private static final int[][] PARADAS = {
@@ -103,6 +105,7 @@ public class PainelTabuleiro extends JPanel implements ObservadorIF {
 	private final BufferedImage[][] melhorias = new BufferedImage[NOMES_DOS_RECURSOS.length][3];
 	private final Fachada fachada = Fachada.getInstancia();
 
+	private boolean escolhendoYurt = false;   // destaca as paradas onde da para construir o yurt
 	private double escala = 1;
 	private int margemX = 0;
 	private int margemY = 0;
@@ -130,6 +133,21 @@ public class PainelTabuleiro extends JPanel implements ObservadorIF {
 		return carregar(arquivo);
 	}
 
+	// "Nome (Herdeiro)", ou so o herdeiro quando o jogador nao digitou um nome.
+	static String nomeDoJogador (int jogador) {
+		Fachada fachada = Fachada.getInstancia();
+		String nome = fachada.getNome(jogador), herdeiro = fachada.getHerdeiro(jogador);
+		return nome.equals(herdeiro) ? nome : nome + " (" + herdeiro + ")";
+	}
+
+	// Item de menu que dispara um comando do Controlador.
+	static JMenuItem item (String texto, String comando) {
+		JMenuItem item = new JMenuItem(texto);
+		item.setActionCommand(comando);
+		item.addActionListener(Controlador.getInstancia());
+		return item;
+	}
+
 	static BufferedImage carregar (String arquivo) {
 		try {
 			return ImageIO.read(PainelTabuleiro.class.getResource("imagens/" + arquivo));
@@ -138,8 +156,17 @@ public class PainelTabuleiro extends JPanel implements ObservadorIF {
 		}
 	}
 
+	// Qualquer mudanca no jogo cancela a escolha da parada do yurt.
 	@Override
 	public void notify (ObservadoIF o) {
+		escolhendoYurt = false;
+		repaint();
+	}
+
+	public boolean isEscolhendoYurt () { return escolhendoYurt; }
+
+	public void setEscolhendoYurt (boolean escolhendo) {
+		escolhendoYurt = escolhendo;
 		repaint();
 	}
 
@@ -164,7 +191,8 @@ public class PainelTabuleiro extends JPanel implements ObservadorIF {
 		desenharMelhorias(g2);
 		desenharYurts(g2);
 		desenharKurultai(g2);
-		desenharAlcancaveis(g2);
+		desenharAneis(g2, fachada.getParadasAlcancaveis(), new Color(255, 255, 255, 190));
+		if (escolhendoYurt) desenharAneis(g2, fachada.getParadasParaYurt(), new Color(255, 215, 0, 220));
 		desenharPioes(g2);
 		desenharKhan(g2);
 	}
@@ -251,23 +279,40 @@ public class PainelTabuleiro extends JPanel implements ObservadorIF {
 		}
 	}
 
-	private void desenharAlcancaveis (Graphics2D g2) {
+	private void desenharAneis (Graphics2D g2, ArrayList<Integer> paradas, Color cor) {
 		g2.setStroke(new BasicStroke((float) Math.max(2, 10 * escala)));
-		g2.setColor(new Color(255, 255, 255, 190));
-		for (int parada : fachada.getParadasAlcancaveis()) {
+		g2.setColor(cor);
+		for (int parada : paradas) {
 			int raio = (int) (PARADAS[parada][2] * escala);
 			g2.drawOval(telaX(PARADAS[parada][0]) - raio, telaY(PARADAS[parada][1]) - raio, raio * 2, raio * 2);
 		}
 	}
 
+	// Altani tem 2 peoes: na vez dela, o que vai jogar fica sobre um anel branco.
 	private void desenharPioes (Graphics2D g2) {
 		for (int parada = 0; parada < Fachada.NUM_PARADAS; parada++) {
-			ArrayList<Integer> naParada = new ArrayList<Integer>();
-			for (int jogador = 0; jogador < fachada.getQuantidadeDeJogadores(); jogador++)
-				if (fachada.getParada(jogador) == parada) naParada.add(jogador);
+			ArrayList<Integer> naParada = new ArrayList<Integer>();      // dono de cada peao
+			ArrayList<Boolean> destacado = new ArrayList<Boolean>();
+			for (int jogador = 0; jogador < fachada.getQuantidadeDeJogadores(); jogador++) {
+				boolean ativoDeAltani = jogador == fachada.getVez() && fachada.getOutraParada(jogador) != Fachada.SEM_PEAO;
+				if (fachada.getParada(jogador) == parada) {
+					naParada.add(jogador);
+					destacado.add(ativoDeAltani);
+				}
+				if (fachada.getOutraParada(jogador) == parada) {
+					naParada.add(jogador);
+					destacado.add(false);
+				}
+			}
 			for (int i = 0; i < naParada.size(); i++) {
-				int deslocamento = (int) ((i - (naParada.size() - 1) / 2.0) * ESPACO_ENTRE_PIOES);
-				desenharPeao(g2, pioes[naParada.get(i) % pioes.length], PARADAS[parada][0] + deslocamento, PARADAS[parada][1]);
+				int x = PARADAS[parada][0] + (int) ((i - (naParada.size() - 1) / 2.0) * ESPACO_ENTRE_PIOES);
+				if (destacado.get(i)) {
+					int r = (int) (75 * escala);
+					g2.setColor(Color.WHITE);
+					g2.setStroke(new BasicStroke((float) Math.max(3, 14 * escala)));
+					g2.drawOval(telaX(x) - r, telaY(PARADAS[parada][1]) - r / 2, 2 * r, r);
+				}
+				desenharPeao(g2, pioes[naParada.get(i) % pioes.length], x, PARADAS[parada][1]);
 			}
 		}
 	}
@@ -328,17 +373,27 @@ public class PainelTabuleiro extends JPanel implements ObservadorIF {
 		return -1;
 	}
 
-	// Menu com os tesouros que podem ser tomados da cidade.
+	// Menu com os tesouros que podem ser tomados da cidade: com espadas e, para
+	// Ogedei, com 1 moeda.
 	public void mostrarAtaque (int cidade, int telaX, int telaY) {
 		JPopupMenu menu = new JPopupMenu();
 		int custo = fachada.getCustoDoAtaque(cidade);
+		boolean espadas = fachada.podeAtacar(cidade), moeda = fachada.podeTomarComMoeda(cidade);
 		for (int tipo = Fachada.GRAOS; tipo <= Fachada.VACA; tipo++) {
 			if (fachada.getTesourosDaCidade(cidade, tipo) <= 0) continue;
-			JMenuItem item = new JMenuItem("Tomar " + NOMES_DOS_RECURSOS[tipo] + " (" + custo + " espada(s))");
-			item.setActionCommand(Controlador.ATACAR + cidade + ":" + tipo);
-			item.addActionListener(Controlador.getInstancia());
-			menu.add(item);
+			String tesouro = NOMES_DOS_RECURSOS[tipo];
+			if (espadas) menu.add(item("Tomar " + tesouro + " (" + custo + " espada(s))", Controlador.ATACAR + cidade + ":" + tipo));
+			if (moeda) menu.add(item("Tomar " + tesouro + " (1 moeda, Ogedei)", Controlador.MOEDA + cidade + ":" + tipo));
 		}
+		menu.show(this, telaX, telaY);
+	}
+
+	// Menu de Jochi: em qual coluna colorida da cartela colocar a melhoria.
+	public void mostrarColunas (int espaco, int telaX, int telaY) {
+		JPopupMenu menu = new JPopupMenu();
+		for (int coluna = Fachada.VERMELHA; coluna <= Fachada.AMARELA; coluna++)
+			if (fachada.getMelhoriasNaColuna(coluna) < Fachada.LINHAS_DA_CARTELA)
+				menu.add(item("Colocar na coluna " + NOMES_DAS_COLUNAS[coluna], Controlador.MELHORIA + espaco + ":" + coluna));
 		menu.show(this, telaX, telaY);
 	}
 }

@@ -92,9 +92,10 @@ class Melhorias {
 		return aplicar(jogador, cor);
 	}
 
-	// A coluna branca aceita melhoria de qualquer cor.
+	// A coluna branca aceita melhoria de qualquer cor. Vale para as da area
+	// e para a do topo da pilha; so a ja comprada nao pode ser aplicada.
 	boolean aplicar(Jogador jogador, int coluna) {
-		if (jogador == null || !estaNaTrilha()) return false;
+		if (jogador == null || foiComprada()) return false;
 		Recurso destino = jogador.colunas.get(coluna);
 		for (int i = 0; i < 12; i++)
 			destino.setItem(i, destino.getItem(i) + bonus.getItem(i));
